@@ -8,8 +8,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
-trials = 1:1;
-validation_id = 1;
+trials = 1:3;
+validation_id = 4;
 destination = 'Amsterdam';
 rtt_col = 3;
 k = 20;
