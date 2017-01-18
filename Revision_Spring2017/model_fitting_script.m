@@ -7,12 +7,14 @@
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+clear all; close all;
+
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
 trials = 1:3;
-validation_id = 4;
+validation_id = 1;
 destination = 'Amsterdam';
 rtt_col = 3;
-k = 20;
+k = 3;
 lambda = 1.0;
 
 data = [];

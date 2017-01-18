@@ -13,7 +13,7 @@ function coeffs = fit_sparse_ar_model(data, k, lambda)
 
 warning('off', 'MATLAB:nargchk:deprecated');
 
-cvx_begin
+cvx_begin quiet
 variable coeffs(k);
 
 % Compute data fidelity term.
