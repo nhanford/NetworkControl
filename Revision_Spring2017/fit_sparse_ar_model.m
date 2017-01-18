@@ -20,8 +20,8 @@ variable coeffs(k);
 expression estimated(numel(data));
 for ii = 1:size(data, 2)
         
-    for jj = 1:length(data)
-        est_idx = (ii - 1) * size(data, 2) + jj;
+    for jj = 1:size(data, 1)
+        est_idx = (ii - 1) * size(data, 1) + jj;
         estimated(est_idx) = 0;
         for kk = 1:min(k, jj - 1)
             estimated(est_idx) = estimated(est_idx) + ...

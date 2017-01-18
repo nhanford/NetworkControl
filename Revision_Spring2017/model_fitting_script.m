@@ -11,7 +11,7 @@ clear all; close all;
 
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
 trials = 1:3;
-validation_id = 1;
+validation_id = 4;
 destination = 'Amsterdam';
 rtt_col = 3;
 k = 3;
@@ -27,11 +27,11 @@ coeffs = fit_sparse_ar_model(data, k, lambda)
 
 % Evaluate fit.
 validation_dir = strcat(data_dir, 'Trial', int2str(validation_id), '/');
-data = get_data(validation_dir, destination, rtt_col);
-estimated = apply_ar_model(data, coeffs);
+validation_data = get_data(validation_dir, destination, rtt_col);
+estimated = apply_ar_model(validation_data, coeffs);
 
 figure;
 hold on;
-plot(data, 'r-*');
+plot(validation_data, 'r-*');
 plot(estimated, 'b-o');
 grid on;
