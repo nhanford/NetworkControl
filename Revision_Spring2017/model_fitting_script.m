@@ -4,7 +4,7 @@
 % File: model_fitting_script.m
 %
 % Imports data and runs AR model fitting.
-% 1/17/2017
+% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
