@@ -8,7 +8,7 @@
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-classdef ConstantVelocityKF
+classdef ConstantVelocityKF < handle
     properties
         x_; % Current state estimate.
         P_; % Current covariance estimate.
@@ -29,7 +29,7 @@ classdef ConstantVelocityKF
             kf.F_ = [2, -1; 1, 0];
             kf.H_ = [1, 0];
             kf.B_ = [0; 0];
-            kf.Q_ = eye(2);
+            kf.Q_ = 10.0 * eye(2);
             kf.R_ = 0.1;
         end
         

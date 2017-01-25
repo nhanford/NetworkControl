@@ -10,7 +10,7 @@
 clear all; close all;
 
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
-trials = 1:1;
+trials = 1:4;
 destination = 'Boulder';
 rtt_col = 3;
 time_col = 1;
@@ -31,13 +31,14 @@ for ii = trials
         predicted(jj) = x(1);
         predicted_var(jj) = trace(P);
         
-        kf.Update(data(jj))
+        [x, P] = kf.Update(data(jj));
+        %predicted(jj) = x(1);
     end
         
     % Create a figure.
     figure;
     hold on;
-    plot(time, data, ':or');
+    plot(time, data, '--or');
     errorbar(time, predicted, sqrt(predicted_var), ':*b');
     title(strcat(destination, ', Trial ', int2str(ii)));
     xlabel('Time (s)');
