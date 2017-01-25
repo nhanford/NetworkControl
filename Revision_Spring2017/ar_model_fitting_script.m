@@ -12,10 +12,10 @@ clear all; close all;
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
 trials = 1:3;
 validation_id = 4;
-destination = 'Amsterdam';
+destination = 'Boulder';
 rtt_col = 3;
-k = 3;
-lambda = 1.0;
+k = 8;
+lambda = 0.1;
 
 data = [];
 for ii = trials
