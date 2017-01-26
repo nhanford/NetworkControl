@@ -16,8 +16,8 @@ rtt_col = 3;
 time_col = 1;
 p = 3;
 q = 0;
-alpha = 1e-11;
-beta = 1e-11;
+alpha = 0.5;
+beta = 0.5;
 
 for ii = trials
     % Extract the data.

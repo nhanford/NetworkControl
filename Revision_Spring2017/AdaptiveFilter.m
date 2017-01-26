@@ -71,6 +71,17 @@ classdef AdaptiveFilter < handle
             u_size = lms.u_.size();
             
             % Gradient descent on 'a'.
+            x_norm = 0;
+            for ii = 1:numel(lms.a_)
+                x_index = x_size - ii;
+                if x_index < 0
+                    break
+                end
+                
+                x_norm = x_norm + ...
+                    lms.x_.get(x_index) * lms.x_.get(x_index);
+            end
+            
             for ii = 1:numel(lms.a_)
                 x_index = x_size - ii;
                 if x_index < 0
@@ -78,17 +89,29 @@ classdef AdaptiveFilter < handle
                 end
                 
                 derivative = error * lms.x_.get(x_index);
-                lms.a_(ii) = lms.a_(ii) - lms.alpha_ * derivative;
+                lms.a_(ii) = lms.a_(ii) - lms.alpha_ * derivative / x_norm;
             end
             
-            % Gradient descent on 'a'.
+            % Gradient descent on 'b'.
+            u_norm = 0;
             for ii = 1:numel(lms.b_)
                 u_index = u_size - ii;
                 if u_index < 0
                     break
                 end
+                
+                u_norm = u_norm + ...
+                    lms.u_.get(u_index) * lms.u_.get(u_index);
+            end
+            
+            for ii = 1:numel(lms.b_)
+                u_index = u_size - ii;
+                if u_index < 0
+                    break
+                end
+                
                 derivative = error * lms.u_.get(u_index);
-                lms.b_(ii) = lms.b_(ii) - lms.beta_ * derivative;
+                lms.b_(ii) = lms.b_(ii) - lms.beta_ * derivative / u_norm;
             end
             
             % Add measurement to the list.
