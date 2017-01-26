@@ -7,8 +7,6 @@
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-import java.util.ArrayList
-
 clear all; close all;
 
 data_dir = '../Code_July2016_LBLToMany/TCP_FQON_data/';
@@ -16,10 +14,10 @@ trials = 1:4;
 destination = 'Boulder';
 rtt_col = 3;
 time_col = 1;
-p = 5;
+p = 3;
 q = 0;
-alpha = 0.1;
-beta = 0.1;
+alpha = 1e-11;
+beta = 1e-11;
 
 for ii = trials
     % Extract the data.
@@ -35,7 +33,7 @@ for ii = trials
         x_hat = lms.Predict(0);
         predicted(jj) = x_hat;
         
-        lms.Update(data(jj));
+        lms.Update(data(jj), x_hat);
     end
         
     % Create a figure.

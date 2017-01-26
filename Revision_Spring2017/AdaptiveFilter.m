@@ -26,6 +26,8 @@ classdef AdaptiveFilter < handle
         % 'alpha' = learning rate for 'a'
         % 'beta' = learning rate for 'b'
         function lms = AdaptiveFilter(p, q, alpha, beta)
+            import java.util.ArrayList
+            
             lms.a_ = 0.1 * randn(p, 1);
             lms.b_ = 0.1 * randn(q, 1);
             lms.x_ = ArrayList();
@@ -71,15 +73,22 @@ classdef AdaptiveFilter < handle
             % Gradient descent on 'a'.
             for ii = 1:numel(lms.a_)
                 x_index = x_size - ii;
-                derivative = error * lms.x_(x_index);
+                if x_index < 0
+                    break
+                end
+                
+                derivative = error * lms.x_.get(x_index);
                 lms.a_(ii) = lms.a_(ii) - lms.alpha_ * derivative;
             end
             
             % Gradient descent on 'a'.
             for ii = 1:numel(lms.b_)
                 u_index = u_size - ii;
-                derivative = error * lms.u_(u_index);
-                lms.b_(ii) = lms.b_(ii) - lms.alpha_ * derivative;
+                if u_index < 0
+                    break
+                end
+                derivative = error * lms.u_.get(u_index);
+                lms.b_(ii) = lms.b_(ii) - lms.beta_ * derivative;
             end
             
             % Add measurement to the list.
