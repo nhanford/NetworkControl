@@ -24,13 +24,13 @@ classdef ConstantVelocityKF < handle
         % Constructor. Initialize to zero state and infinite covariance.
         function kf = ConstantVelocityKF()
             kf.x_ = [0; 0];
-            kf.P_ = [1e6, 1e6; 1e6, 1e6];
+            kf.P_ = [1e16, 1e16; 1e16, 1e16];
             
             kf.F_ = [2, -1; 1, 0];
             kf.H_ = [1, 0];
             kf.B_ = [0; 0];
             kf.Q_ = 10.0 * eye(2);
-            kf.R_ = 0.1;
+            kf.R_ = 1.0;
         end
         
         % Predict.

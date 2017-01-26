@@ -1,11 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Author: David Fridovich-Keil
-% File: kf_model_fitting_script.m
+% File: adaptive_model_fitting_script.m
 %
-% Imports data and runs KF model fitting.
+% Imports data and runs adaptive filter model fitting.
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+import java.util.ArrayList
 
 clear all; close all;
 
@@ -14,6 +16,10 @@ trials = 1:4;
 destination = 'Boulder';
 rtt_col = 3;
 time_col = 1;
+p = 5;
+q = 0;
+alpha = 0.1;
+beta = 0.1;
 
 for ii = trials
     % Extract the data.
@@ -22,24 +28,21 @@ for ii = trials
     time = get_data(trial_dir, destination, time_col);
 
     % Compute the "predicted" time series.
-    kf = ConstantVelocityKF();
+    lms = AdaptiveFilter(p, q, alpha, beta);
     predicted = zeros(size(data));
-    predicted_var = zeros(size(data));
     
     for jj = 1:length(predicted)
-        [x, P] = kf.Predict(0);
-        predicted(jj) = x(1);
-        predicted_var(jj) = trace(P);
+        x_hat = lms.Predict(0);
+        predicted(jj) = x_hat;
         
-        [x, P] = kf.Update(data(jj));
-        %predicted(jj) = x(1);
+        lms.Update(data(jj));
     end
         
     % Create a figure.
     figure;
     hold on;
     plot(time(2:end), data(2:end), '--or');
-    errorbar(time(2:end), predicted(2:end), sqrt(predicted_var(2:end)), ':*b');
+    plot(time(2:end), predicted(2:end), ':*b');
     title(strcat(destination, ', Trial ', int2str(ii)));
     xlabel('Time (s)');
     ylabel('Round trip time (us)');
