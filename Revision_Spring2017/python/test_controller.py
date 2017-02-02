@@ -46,12 +46,10 @@ predicted_latency = np.zeros(NUM_DATA_POINTS)
 recorded_control = np.zeros(NUM_DATA_POINTS)
 last_control = 0.0
 for ii in range(NUM_DATA_POINTS):
-    predicted_latency[ii] = controller.model_.Predict(last_control)
-    controller.model_.r_.popleft()
-
+    predicted_latency[ii] = controller.model_.Predict(last_control, True)
     recorded_latency[ii] = world.Generate(last_control)
-    last_control = max(0.0, controller.Process(recorded_latency[ii]))
 
+    last_control = max(0.0, controller.Process(recorded_latency[ii]))
     recorded_control[ii] = last_control
 
 

@@ -41,7 +41,7 @@ class Controller:
         # (2) Compute optimal control.
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
 
-        self.l_hat_ = self.model_.Predict()
+        self.l_hat_ = self.model_.Predict(0.0, False)
         self.model_.r_.popleft()
 
         """

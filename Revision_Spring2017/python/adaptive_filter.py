@@ -28,11 +28,18 @@ class AdaptiveFilter:
         self.l_ = deque(maxlen=p)
         self.r_ = deque(maxlen=q)
 
-    def Predict(self, last_r=0.0):
-        """ Pass in the next control input 'r' and predict next latency 'l'. """
+    def Predict(self, last_r=0.0, restore=False):
+        """
+        Pass in the next control input 'r' and predict next latency 'l'.
+        If 'restore' flag is set, then does not change state. Otherwise,
+        remembers thsi control input 'last_r' and potentially forgets oldest
+        control.
+        """
         l_hat = 0.0
 
         # Add control to the deque. Most recent values are on the left.
+        if len(self.r_) > 0:
+            oldest_r = self.r_[-1]
         self.r_.appendleft(last_r)
 
         # Convolve 'a' with latency history.
@@ -42,6 +49,12 @@ class AdaptiveFilter:
         # Convolve 'b' with control history.
         for ii, r in enumerate(self.r_):
             l_hat += r * self.b_[ii]
+
+        # Maybe restore to original state.
+        if (restore):
+            self.r_.popleft()
+            if len(self.r_) == self.q_:
+                self.r_.append(oldest_r)
 
         return l_hat
 
