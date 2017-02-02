@@ -5,7 +5,7 @@
 %
 % Implements a linear adaptive filter with LMS single-point expectation
 % approximation.
-% 
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef AdaptiveFilter < handle
@@ -17,7 +17,7 @@ classdef AdaptiveFilter < handle
         alpha_; % Learning rate for 'a'.
         beta_; % Learning rate for 'b'.
     end
-    
+
     methods
         % Constructor. Initialize filters with i.i.d. Gaussian.
         % Must provide the following inputs:
@@ -27,7 +27,7 @@ classdef AdaptiveFilter < handle
         % 'beta' = learning rate for 'b'
         function lms = AdaptiveFilter(p, q, alpha, beta)
             import java.util.ArrayList
-            
+
             lms.a_ = 0.1 * randn(p, 1);
             lms.b_ = 0.1 * randn(q, 1);
             lms.x_ = ArrayList();
@@ -35,41 +35,41 @@ classdef AdaptiveFilter < handle
             lms.alpha_ = alpha;
             lms.beta_ = beta;
         end
-        
+
         % Predict using the current coefficients. Must supply a control
         % input 'u'.
         function x_hat = Predict(lms, u)
             x_hat = 0;
-            
+
             % Add 'u' to the control history.
             lms.u_.add(u);
 
             % Get sizes of histories.
             x_size = lms.x_.size();
             u_size = lms.u_.size();
-            
+
             % Convolve 'a' with latency history.
             for ii = 1:min(x_size, numel(lms.a_))
                 x_index = x_size - ii;
                 x_hat = x_hat + lms.x_.get(x_index) * lms.a_(ii);
             end
-            
+
             % Convolve 'b' with control history.
             for ii = 1:min(u_size, numel(lms.b_))
                 u_index = u_size - ii;
                 x_hat = x_hat + lms.u_.get(u_index) * lms.b_(ii);
             end
         end
-        
+
         % Update the coefficients given a prior prediction and the
         % corresponding measurement.
         function Update(lms, x, x_hat)
             error = x_hat - x;
-            
+
             % Get sizes of histories.
             x_size = lms.x_.size();
             u_size = lms.u_.size();
-            
+
             % Gradient descent on 'a'.
             x_norm = 0;
             for ii = 1:numel(lms.a_)
@@ -77,21 +77,21 @@ classdef AdaptiveFilter < handle
                 if x_index < 0
                     break
                 end
-                
+
                 x_norm = x_norm + ...
                     lms.x_.get(x_index) * lms.x_.get(x_index);
             end
-            
+
             for ii = 1:numel(lms.a_)
                 x_index = x_size - ii;
                 if x_index < 0
                     break
                 end
-                
+
                 derivative = error * lms.x_.get(x_index);
                 lms.a_(ii) = lms.a_(ii) - lms.alpha_ * derivative / x_norm;
             end
-            
+
             % Gradient descent on 'b'.
             u_norm = 0;
             for ii = 1:numel(lms.b_)
@@ -99,23 +99,23 @@ classdef AdaptiveFilter < handle
                 if u_index < 0
                     break
                 end
-                
+
                 u_norm = u_norm + ...
                     lms.u_.get(u_index) * lms.u_.get(u_index);
             end
-            
+
             for ii = 1:numel(lms.b_)
                 u_index = u_size - ii;
                 if u_index < 0
                     break
                 end
-                
+
                 derivative = error * lms.u_.get(u_index);
                 lms.b_(ii) = lms.b_(ii) - lms.beta_ * derivative / u_norm;
             end
-            
+
             % Add measurement to the list.
             lms.x_.add(x);
-        end        
+        end
     end
 end
