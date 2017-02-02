@@ -3,3 +3,6 @@
 
 # OSX file backups.
 *.DS_Store
+
+# Python stuff.
+*.pyc
