@@ -13,24 +13,24 @@ from controller import Controller
 import numpy as np
 import matplotlib.pyplot as plt
 
-NUM_DATA_POINTS = 100
+NUM_DATA_POINTS = 1000
 
 # Adaptive filter parameters.
 ALPHA = 0.5
 BETA = 0.5
-P = 10
+P = 1
 Q = 1
 
 # Controller parameters.
-PSI = 1.0
-XI = 1e-5
-GAMMA = 0.9
+PSI = 0.5
+XI = 0.1
+GAMMA = 0.5
 
 # Latency generator parameters.
 L_MAX = 1.0
-L_SLOPE = 0.05
+L_SLOPE = 0.02
 L_CUT = 0.1
-R_COEFF = 0.02
+R_COEFF = 0.002
 NOISE_SD = 0.0
 
 # Create a latency generator.
@@ -44,19 +44,19 @@ recorded_index = np.arange(NUM_DATA_POINTS)
 recorded_latency = np.zeros(NUM_DATA_POINTS)
 predicted_latency = np.zeros(NUM_DATA_POINTS)
 recorded_control = np.zeros(NUM_DATA_POINTS)
-r = 0.0
+last_control = 0.0
 for ii in range(NUM_DATA_POINTS):
-    recorded_latency[ii] = world.Generate(r)
-    (r, l_hat) = controller.Process(recorded_latency[ii])
+    predicted_latency[ii] = controller.model_.Predict(last_control)
+    controller.model_.r_.popleft()
 
-    r = max(0.0, r)
+    recorded_latency[ii] = world.Generate(last_control)
+    last_control = max(0.0, controller.Process(recorded_latency[ii]))
+
 #    print "Optimal control is : %f" % r
 #    print "B1 coefficient is : %f" % controller.model_.b_[0]
-    r = 0.0
+    last_control = 0.0
     recorded_control[ii] = 0.0
 
-    if ii < NUM_DATA_POINTS - 1:
-        predicted_latency[ii + 1] = l_hat
 
 # Plot.
 plt.figure()

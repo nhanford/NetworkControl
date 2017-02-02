@@ -44,11 +44,14 @@ class Controller:
         self.l_hat_ = self.model_.Predict()
         self.model_.r_.popleft()
 
+        """
         r_opt = (self.mu_ - self.l_hat_ +
                  (self.xi_ - self.model_.b_[0]) /
                  (self.psi_ * self.model_.b_[0])) / self.model_.b_[0]
+        """
+        r_opt = 0.0
 
         self.model_.r_.appendleft(r_opt)
         self.l_hat_ += self.model_.b_[0] * r_opt
 
-        return r_opt, self.l_hat_
+        return r_opt
