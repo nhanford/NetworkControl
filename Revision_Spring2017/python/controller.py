@@ -51,4 +51,4 @@ class Controller:
         self.model_.r_.appendleft(r_opt)
         self.l_hat_ += self.model_.b_[0] * r_opt
 
-        return r_opt
+        return r_opt, self.l_hat_

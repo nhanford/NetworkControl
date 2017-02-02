@@ -59,13 +59,15 @@ class AdaptiveFilter:
         for r in self.r_:
             r_norm += r * r
 
-        # Gradient descent on 'a'.
-        for ii, l in enumerate(self.l_):
-            self.a_[ii] -= self.alpha_ * error * l / l_norm
+        # Gradient descent on 'a'
+        if l_norm > 1e-16:
+            for ii, l in enumerate(self.l_):
+                self.a_[ii] -= self.alpha_ * error * l / l_norm
 
         # Gradient descent on 'a'.
-        for ii, r in enumerate(self.r_):
-            self.b_[ii] -= self.beta_ * error * r / r_norm
+        if r_norm > 1e-16:
+            for ii, r in enumerate(self.r_):
+                self.b_[ii] -= self.beta_ * error * r / r_norm
 
         # Add new measurement to the history.
         self.l_.appendleft(l_meas)
