@@ -52,10 +52,7 @@ for ii in range(NUM_DATA_POINTS):
     recorded_latency[ii] = world.Generate(last_control)
     last_control = max(0.0, controller.Process(recorded_latency[ii]))
 
-#    print "Optimal control is : %f" % r
-#    print "B1 coefficient is : %f" % controller.model_.b_[0]
-    last_control = 0.0
-    recorded_control[ii] = 0.0
+    recorded_control[ii] = last_control
 
 
 # Plot.
