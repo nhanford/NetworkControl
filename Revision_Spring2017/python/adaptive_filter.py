@@ -20,9 +20,9 @@ class AdaptiveFilter:
         self.alpha_ = alpha # Learning rate for AR coefficients.
         self.beta_ = beta # Learning rate for MA coefficients.
 
-        # Initialize coefficients randomly.
-        self.a_ = np.random.randn(p)
-        self.b_ = np.random.randn(q)
+        # Initialize coefficients with all zeros.
+        self.a_ = np.ones(p)
+        self.b_ = np.ones(q)
 
         # History stored as a deque.
         self.l_ = deque(maxlen=p)
@@ -72,15 +72,17 @@ class AdaptiveFilter:
         for r in self.r_:
             r_norm += r * r
 
+        total_norm = l_norm + r_norm
+
         # Gradient descent on 'a'
-        if l_norm + r_norm > 1e-16:
+        if total_norm > 1e-16:
             for ii, l in enumerate(self.l_):
-                self.a_[ii] -= self.alpha_ * error * l / (l_norm + r_norm)
+                self.a_[ii] -= self.alpha_ * error * l / total_norm
 
         # Gradient descent on 'a'.
-        if r_norm + l_norm > 1e-16:
+        if total_norm > 1e-16:
             for ii, r in enumerate(self.r_):
-                self.b_[ii] -= self.beta_ * error * r / (l_norm + r_norm)
+                self.b_[ii] -= self.beta_ * error * r / total_norm
 
         # Add new measurement to the history.
         self.l_.appendleft(l_meas)

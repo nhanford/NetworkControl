@@ -42,16 +42,16 @@ class Controller:
 
         # (2) Compute optimal control.
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
+        self.l_hat_ = self.model_.Predict(0.0, True)
 
-        self.l_hat_ = self.model_.Predict(0.0)
-
-        """
-        r_opt = (self.mu_ - self.l_hat_ +
-                 (self.xi_ - self.model_.b_[0]) /
-                 (self.psi_ * self.model_.b_[0])) / self.model_.b_[0]
+        r_opt = max(0.0, (self.mu_ - self.l_hat_ +
+                          (self.xi_ - self.model_.b_[0]) /
+                          (self.psi_ * self.model_.b_[0])) / self.model_.b_[0])
 #        r_opt = 0.0
-        """
-        r_opt = 0.1 * np.random.randn()
+
+#        print self.model_.b_[0]
+        print r_opt
+
 
         self.model_.r_.appendleft(r_opt)
         self.l_hat_ += self.model_.b_[0] * r_opt
