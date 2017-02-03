@@ -10,6 +10,8 @@
 
 from adaptive_filter import AdaptiveFilter
 
+import numpy as np
+
 class Controller:
 
     def __init__(self, psi, xi, gamma, p, q, alpha, beta):
@@ -40,7 +42,10 @@ class Controller:
 
         # (2) Compute optimal control.
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
+        r_opt = 0.1 * np.random.randn()
+        self.l_hat_ = self.model_.Predict(r_opt)
 
+        """
         self.l_hat_ = self.model_.Predict(0.0, False)
         self.model_.r_.popleft()
 
@@ -52,5 +57,6 @@ class Controller:
 
         self.model_.r_.appendleft(r_opt)
         self.l_hat_ += self.model_.b_[0] * r_opt
+        """
 
         return r_opt
