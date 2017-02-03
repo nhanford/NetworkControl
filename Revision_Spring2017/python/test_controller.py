@@ -13,22 +13,22 @@ from controller import Controller
 import numpy as np
 import matplotlib.pyplot as plt
 
-NUM_DATA_POINTS = 100
+NUM_DATA_POINTS = 200
 
 # Adaptive filter parameters.
-ALPHA = 0.1
-BETA = 0.1
-P = 2
-Q = 2
+ALPHA = 1.0
+BETA = 1.0
+P = 5
+Q = 1
 
 # Controller parameters.
 PSI = 10.0
-XI = 0.1
+XI = 0.0
 GAMMA = 0.5
 
 # Latency generator parameters.
 L_MAX = 1.0
-L_SLOPE = 0.02
+L_SLOPE = 0.01
 L_CUT = 0.1
 R_COEFF = 0.2
 NOISE_SD = 0.0

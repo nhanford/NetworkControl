@@ -52,9 +52,11 @@ class AdaptiveFilter:
 
         # Maybe restore to original state.
         if (restore):
-            self.r_.popleft()
             if len(self.r_) == self.q_:
                 self.r_.append(oldest_r)
+            else:
+                self.r_.popleft()
+
 
         return l_hat
 

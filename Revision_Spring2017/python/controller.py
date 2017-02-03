@@ -45,12 +45,12 @@ class Controller:
         self.l_hat_ = self.model_.Predict(0.0, True)
 
         r_opt = max(0.0, (self.mu_ - self.l_hat_ +
-                          (self.xi_ - self.model_.b_[0]) /
-                          (self.psi_ * self.model_.b_[0])) / self.model_.b_[0])
+                          ((self.xi_ - self.model_.b_[0]) /
+                          (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0])
 #        r_opt = 0.0
-
+        r_opt = 0.1
 #        print self.model_.b_[0]
-        print r_opt
+        print "b_0 = %f, r_opt = %f" % (self.model_.b_[0], r_opt)
 
 
         self.model_.r_.appendleft(r_opt)
