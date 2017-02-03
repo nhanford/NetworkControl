@@ -16,21 +16,21 @@ import matplotlib.pyplot as plt
 NUM_DATA_POINTS = 200
 
 # Adaptive filter parameters.
-ALPHA = 1.0
-BETA = 1.0
+ALPHA = 0.5
+BETA = 0.5
 P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 10.0
-XI = 0.0
+PSI = 1.0
+XI = 0.1
 GAMMA = 0.5
 
 # Latency generator parameters.
 L_MAX = 1.0
 L_SLOPE = 0.01
 L_CUT = 0.1
-R_COEFF = 0.2
+R_COEFF = -0.005
 NOISE_SD = 0.0
 
 # Create a latency generator.
