@@ -30,4 +30,6 @@ class LatencyGenerator:
         if self.l_ > self.l_max_:
             self.l_ *= self.l_cut_
 
+        self.l_ = max(0.0, self.l_)
+
         return self.l_
