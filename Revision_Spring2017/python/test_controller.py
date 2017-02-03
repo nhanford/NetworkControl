@@ -30,7 +30,7 @@ GAMMA = 0.5
 L_MAX = 1.0
 L_SLOPE = 0.01
 L_CUT = 0.1
-R_COEFF = -0.005
+R_COEFF = -0.01
 NOISE_SD = 0.0
 
 # Create a latency generator.
