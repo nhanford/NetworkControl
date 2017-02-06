@@ -1,0 +1,128 @@
+'''
+livetest.py -- Applies control to FQ-CoDel pacing qdisc.
+livetest is designed for any Linux distribution with tc_fq available in 
+its iproute2 package
+
+@author: Nathan Hanford
+@author: David Fridovich-Keil
+@contact: nhanford@es.net
+@contact: dfk@eecs.berkeley.edu
+@deffield: updated: Updated
+'''
+import 
+sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv
+from controller import Controller
+
+# Adaptive filter parameters.
+ALPHA = 0.5
+BETA = 0.5
+P = 5
+Q = 1
+
+# Controller parameters.
+PSI = 1.0
+XI = 0.1
+GAMMA = 0.5
+
+# Latency generator parameters.
+L_MAX = 1.0
+L_SLOPE = 0.01
+L_CUT = 0.1
+R_COEFF = -0.02
+NOISE_SD = 0.0
+
+def pollss():
+    '''gets data from ss'''
+    out = subprocess.check_output(['ss','-i','-t','-n'])
+    out = re.sub('\A.+\n','',out)
+    out = re.sub('\n\t','',out)
+    out = out.splitlines()
+    return out
+
+def parseconnection(connection):
+    '''parses a string representing a single TCP connection'''
+    #Junk gets filtered in @loadconnections
+    try:
+        connection = connection.strip()
+        ordered = re.sub(':|,|/|Mbps',' ',connection)
+        ordered = connection.split()
+        ips = re.findall('\d+\.\d+\.\d+\.\d+',connection)
+        ports = re.findall('\d:\w+',connection)
+        rtt = re.search('rtt:\d+[.]?\d+',connection)
+        wscaleavg = re.search('wscale:\d+',connection)
+        mss = re.search('mss:\d+',connection)
+        cwnd = re.search('cwnd:\d+',connection)
+        retrans = re.search('retrans:\d+\/\d+',connection)
+    except Exception as e:
+        logging.warning('connection {} could not be parsed'.format(connection))
+        return -1,-1,-1,-1,-1,-1,-1
+    if rtt:
+        rtt = float(rtt.group(0)[4:])
+    else:
+        rtt = -1
+    if wscaleavg:
+        wscaleavg = wscaleavg.group(0)[7:]
+        wscaleavg = int(wscaleavg)
+    else:
+        wscaleavg = -1
+    if cwnd:
+        cwnd = cwnd.group(0)[5:]
+        cwnd = int(cwnd)
+    else:
+        cwnd = -1
+    if retrans:
+        retrans = retrans.group(0)
+        retrans = re.sub('retrans:\d+\/','',retrans)
+        retrans = int(retrans)
+    else:
+        retrans = -1
+    if mss:
+        mss = mss.group(0)[4:]
+        mss = int(mss)
+    else:
+        mss = -1
+    if len(ips) > 1 and len(ports) > 1 and rtt and wscaleavg and cwnd and retrans:
+        ports[0] = int(ports[0][2:])
+        ports[1] = int(ports[1][2:])
+        return ips, ports, rtt, wscaleavg, cwnd, retrans, mss
+    logging.warning('connection {} could not be parsed'.format(connection))
+    return -1,-1,-1,-1,-1,-1,-1
+
+def findconn(connections):
+    for connection in connections:
+        ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
+        if ips[0]=='128.120.80.98' and ips[1]=='198.129.254.14' and 4999<ports[1]<6000 and cwnd>10:
+            return ips,ports,rtt,wscaleavg,cwnd,retrans,mss
+    return -1,-1,-1,-1,-1,-1,-1
+
+def setfq(rate):
+    subprocess.check_call(['tc','qdisc','change','dev','eth3','root','fq','maxrate',rate+'Gbit'])
+    return
+
+def getBytes():
+    out = subprocess.check_output(['ifconfig','eth3'])
+    out = re.search('TX bytes:\d+',out)
+    out = out.group()
+    out = out[9:]
+    out = int(out)
+    return out
+
+def main():
+    intervalNum = 0
+    oldBytes = getbytes()
+    flowFound = False
+	for i in range(3000):
+		time.sleep(.01)
+		newBytes = getBytes()
+		ssout = pollss()
+		tput = ((newBytes - oldBytes) * 8) / float(1000000000)
+		ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+		if rtt > 0:
+            cwndBytes = cwnd*mss
+            flowFound = True
+		elif flowFound == True
+			break
+		oldBytes = newBytes
+
+if __name__ =='__main__':
+	main()
