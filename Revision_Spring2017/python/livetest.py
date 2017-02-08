@@ -121,7 +121,7 @@ def main():
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
         if rtt > 0:
             #Code for testing random fq settings:
-            if (i % 100 == 0):
+            if (i % 1000 == 0):
                 rate = random.randint(1,10)
                 setfq(rate)
             #Code 
