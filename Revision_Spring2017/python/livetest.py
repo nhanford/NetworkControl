@@ -1,16 +1,14 @@
+#!/usr/bin/python
 '''
 livetest.py -- Applies control to FQ-CoDel pacing qdisc.
 livetest is designed for any Linux distribution with tc_fq available in 
 its iproute2 package
 
 @author: Nathan Hanford
-@author: David Fridovich-Keil
 @contact: nhanford@es.net
-@contact: dfk@eecs.berkeley.edu
 @deffield: updated: Updated
 '''
-import 
-sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
+import sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
 from myController import Controller
 
 # Adaptive filter parameters.
@@ -108,35 +106,35 @@ def getBytes():
     return out
 
 def main():
-	subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30'])
+    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30'])
     intervalNum = 0
-    oldBytes = getbytes()
+    oldBytes = getBytes()
     flowFound = False
     output, path = tempfile.mkstemp(suffix='.csv')
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
     rate,controllerRate = -1
-	for i in range(12000):
-		time.sleep(.01)
-		newBytes = getBytes()
-		ssout = pollss()
-		tput = ((newBytes - oldBytes) * 8) / float(1000000000)
-		ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
-		if rtt > 0:
-			#Code for testing random fq settings:
-			if (i % 100 == 0):
-				rate = random.randint(1,10)
-				setfq(rate)
-			#Code 
+    for i in range(12000):
+        time.sleep(.01)
+        newBytes = getBytes()
+        ssout = pollss()
+        tput = ((newBytes - oldBytes) * 8) / float(1000000000)
+        ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+        if rtt > 0:
+            #Code for testing random fq settings:
+            if (i % 100 == 0):
+                rate = random.randint(1,10)
+                setfq(rate)
+            #Code 
             flowFound = True
             #Code for testing controller
             controllerRate = controller.Process(rtt)
-		elif flowFound == True
-			break
-		oldBytes = newBytes
-		
-	os.close(output)
-	shutil.copy(path, 'output.csv')
-	os.remove(path)
+        elif (flowFound == True):
+            break
+        oldBytes = newBytes
+        
+    os.close(output)
+    shutil.copy(path, 'output.csv')
+    os.remove(path)
 
 if __name__ =='__main__':
-	main()
+    main()
