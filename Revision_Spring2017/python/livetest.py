@@ -10,7 +10,7 @@ its iproute2 package
 @deffield: updated: Updated
 '''
 import 
-sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv
+sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
 from controller import Controller
 
 # Adaptive filter parameters.
@@ -108,21 +108,35 @@ def getBytes():
     return out
 
 def main():
+	subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30'])
     intervalNum = 0
     oldBytes = getbytes()
     flowFound = False
-	for i in range(3000):
+    output, path = tempfile.mkstemp(suffix='.csv')
+    controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
+    rate,controllerRate = -1
+	for i in range(12000):
 		time.sleep(.01)
 		newBytes = getBytes()
 		ssout = pollss()
 		tput = ((newBytes - oldBytes) * 8) / float(1000000000)
 		ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
 		if rtt > 0:
-            cwndBytes = cwnd*mss
+			#Code for testing random fq settings:
+			if (i % 100 == 0):
+				rate = random.randint(1,10)
+				setfq(rate)
+			#Code 
             flowFound = True
+            #Code for testing controller
+            controllerRate = controller.Process(rtt)
 		elif flowFound == True
 			break
 		oldBytes = newBytes
+		
+	os.close(output)
+	shutil.copy(path, 'output.csv')
+	os.remove(path)
 
 if __name__ =='__main__':
 	main()
