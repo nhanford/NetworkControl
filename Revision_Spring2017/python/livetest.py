@@ -112,7 +112,7 @@ def main():
     flowFound = False
     output, path = tempfile.mkstemp(suffix='.csv')
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
-    rate,controllerRate = -1
+    rate,controllerRate = -1,-1
     for i in range(12000):
         time.sleep(.01)
         newBytes = getBytes()
