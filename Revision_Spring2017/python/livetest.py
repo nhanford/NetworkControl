@@ -11,7 +11,7 @@ its iproute2 package
 '''
 import 
 sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
-from controller import Controller
+from myController import Controller
 
 # Adaptive filter parameters.
 ALPHA = 0.5
