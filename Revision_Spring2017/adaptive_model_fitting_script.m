@@ -4,7 +4,7 @@
 % File: adaptive_model_fitting_script.m
 %
 % Imports data and runs adaptive filter model fitting.
-% 
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear all; close all;
@@ -28,14 +28,14 @@ for ii = trials
     % Compute the "predicted" time series.
     lms = AdaptiveFilter(p, q, alpha, beta);
     predicted = zeros(size(data));
-    
+
     for jj = 1:length(predicted)
         x_hat = lms.Predict(0);
         predicted(jj) = x_hat;
-        
+
         lms.Update(data(jj), x_hat);
     end
-        
+
     % Create a figure.
     figure;
     hold on;
