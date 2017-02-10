@@ -127,6 +127,7 @@ def main():
 				if (i % 1000 == 0):
 					rate = random.randint(1,10)
 					setfq(rate)
+					print('debug')
 				#Code 
 				flowFound = True
 				#Code for testing controller
