@@ -120,14 +120,13 @@ def main():
 			newBytes = getBytes()
 			ssout = pollss()
 			#edited throughput for ms instead of s--not terribly confident...
-			tput = ((newBytes - oldBytes) * 8) / float(100000)
+			tput = ((newBytes - oldBytes) * 8) / float(1000)
 			ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
 			if rtt > 0:
 				#Code for testing random fq settings:
 				if (i % 100 == 0):
 					rate = random.randint(1,10)
 					setfq(rate)
-					print('debug')
 				#Code 
 				flowFound = True
 				#Code for testing controller
