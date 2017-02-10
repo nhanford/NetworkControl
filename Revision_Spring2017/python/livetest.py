@@ -110,35 +110,33 @@ def main():
     intervalNum = 0
     oldBytes = getBytes()
     flowFound = False
-    output = tempfile.NamedTemporaryFile(suffix='.csv',delete=False)
-    path = output.name
-    writer = csv.writer(output)
-    writer.writerow(['rtt','randRate','controlRate','throughput','retransmits','cwnd','mss'])
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
     rate,controllerRate = -1,-1
-    for i in range(12000):
-        time.sleep(.01)
-        newBytes = getBytes()
-        ssout = pollss()
-        #edited throughput for ms instead of s--not terribly confident...
-        tput = ((newBytes - oldBytes) * 8) / float(1000000)
-        ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
-        if rtt > 0:
-            #Code for testing random fq settings:
-            if (i % 1000 == 0):
-                rate = random.randint(1,10)
-                setfq(rate)
-            #Code 
-            flowFound = True
-            #Code for testing controller
-            controllerRate = controller.Process(rtt)
-            writer.writerow([rtt,rate,controllerRate,tput,retrans,cwnd,mss])
-        elif (flowFound == True):
-            break
-        oldBytes = newBytes
-    os.close(output)
-    shutil.copy(path, 'output.csv')
-    os.remove(path)
+    with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
+		writer = csv.writer(output)
+		writer.writerow(['rtt','randRate','controlRate','throughput','retransmits','cwnd','mss'])
+		for i in range(12000):
+			time.sleep(.01)
+			newBytes = getBytes()
+			ssout = pollss()
+			#edited throughput for ms instead of s--not terribly confident...
+			tput = ((newBytes - oldBytes) * 8) / float(1000000)
+			ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+			if rtt > 0:
+				#Code for testing random fq settings:
+				if (i % 1000 == 0):
+					rate = random.randint(1,10)
+					setfq(rate)
+				#Code 
+				flowFound = True
+				#Code for testing controller
+				controllerRate = controller.Process(rtt)
+				writer.writerow([rtt,rate,controllerRate,tput,retrans,cwnd,mss])
+			elif (flowFound == True):
+				break
+			oldBytes = newBytes
+    shutil.copy(output.name, 'output.csv')
+    os.unlink(output.name)
 
 if __name__ =='__main__':
     main()
