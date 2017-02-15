@@ -32,6 +32,7 @@ class Controller:
 
     def Process(self, l):
         """
+        For applied I'll give you a bool
         Process a new latency value. Two steps:
         (1) updates internal model, and
         (2) computes optimal control.
@@ -44,7 +45,7 @@ class Controller:
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
         self.l_hat_ = self.model_.Predict(0.0, True)
 
-        r_opt = max(1.0, min((self.mu_ - self.l_hat_ +
+        r_opt = max(0.0, min((self.mu_ - self.l_hat_ +
                               ((self.xi_ - self.model_.b_[0]) /
                                (self.psi_ * self.model_.b_[0]))) /
                              self.model_.b_[0], 10.0))
