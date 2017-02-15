@@ -106,7 +106,7 @@ def getBytes():
     return out
 
 def main():
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-JF','iOutput.json'])
+    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-d','iOutput.json'])
     intervalNum = 0
     oldBytes = getBytes()
     flowFound = False
