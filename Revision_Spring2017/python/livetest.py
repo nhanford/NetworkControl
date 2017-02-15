@@ -23,7 +23,7 @@ XI = 0.1
 GAMMA = 0.5
 
 # Latency generator parameters.
-L_MAX = 1.0r_opt
+L_MAX = 1.0
 L_SLOPE = 0.01
 L_CUT = 0.1
 R_COEFF = -0.02
