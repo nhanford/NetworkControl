@@ -114,7 +114,7 @@ def main():
     rate,controllerRate = -1,-1
     with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
 		writer = csv.writer(output)
-		writer.writerow(['rtt','controlRate','throughput','retransmits','cwnd','mss'])
+		writer.writerow(['rtt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
 		for i in range(20000):
 			time.sleep(.01)
 			newBytes = getBytes()
@@ -126,9 +126,11 @@ def main():
 				#Code for testing random fq settings:
 				flowFound = True
 				#Code for calling controller
-				rate = controller.Process(rtt)
-				setfq(rate)
-				writer.writerow([rtt,rate,tput,retrans,cwnd,mss])
+				controllerRate = controller.Process(rtt)
+				if (i % 30 == 0)
+					rate = controllerRate
+					setfq(rate)
+				writer.writerow([rtt,controllerRate,rate,tput,retrans,cwnd,mss])
 			elif (flowFound == True):
 				break
 			oldBytes = newBytes
