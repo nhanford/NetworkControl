@@ -126,7 +126,7 @@ def main():
 				#Code for testing random fq settings:
 				flowFound = True
 				#Code for calling controller
-				controllerRate = controller.Process(rtt)
+				controllerRate = controller.Process(rtt,rate)
 				if (i % 30 == 0):
 					rate = controllerRate
 					setfq(rate)
