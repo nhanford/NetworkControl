@@ -127,7 +127,7 @@ def main():
 				flowFound = True
 				#Code for calling controller
 				controllerRate = controller.Process(rtt)
-				if (i % 30 == 0)
+				if (i % 30 == 0):
 					rate = controllerRate
 					setfq(rate)
 				writer.writerow([rtt,controllerRate,rate,tput,retrans,cwnd,mss])
