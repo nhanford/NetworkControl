@@ -9,7 +9,7 @@ its iproute2 package
 @deffield: updated: Updated
 '''
 import sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
-from myController import Controller
+from controller import Controller
 
 # Adaptive filter parameters.
 ALPHA = 0.5
@@ -23,7 +23,7 @@ XI = 0.1
 GAMMA = 0.5
 
 # Latency generator parameters.
-L_MAX = 1.0
+L_MAX = 1.0r_opt
 L_SLOPE = 0.01
 L_CUT = 0.1
 R_COEFF = -0.02
@@ -106,7 +106,7 @@ def getBytes():
     return out
 
 def main():
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30'])
+    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-JF','iOutput.json'])
     intervalNum = 0
     oldBytes = getBytes()
     flowFound = False
