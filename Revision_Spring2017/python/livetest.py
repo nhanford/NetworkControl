@@ -115,7 +115,7 @@ def main():
     with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
 		writer = csv.writer(output)
 		writer.writerow(['rtt','randRate','controlRate','throughput','retransmits','cwnd','mss'])
-		for i in range(12000):
+		for i in range(20000):
 			time.sleep(.01)
 			newBytes = getBytes()
 			ssout = pollss()
