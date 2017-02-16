@@ -94,7 +94,7 @@ def findconn(connections):
     return -1,-1,-1,-1,-1,-1,-1
 
 def setfq(rate):
-    subprocess.check_call(['tc','qdisc','change','dev','eth3','root','fq','maxrate',str(rate)+'Gbit'])
+    subprocess.check_call(['tc','qdisc','change','dev','eth4','root','fq','maxrate',str(rate)+'Gbit'])
     return
 
 def getBytes():
