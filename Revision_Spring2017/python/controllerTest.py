@@ -19,7 +19,7 @@ Q = 1
 
 # Controller parameters.
 PSI = 1.0
-XI = 0.1
+XI = 10.0
 GAMMA = 0.5
 
 # Latency generator parameters.
@@ -94,7 +94,7 @@ def findconn(connections):
     return -1,-1,-1,-1,-1,-1,-1
 
 def setfq(rate):
-    subprocess.check_call(['tc','qdisc','change','dev','eth3','root','fq','maxrate',str(rate)+'Gbit'])
+    subprocess.check_call(['tc','qdisc','change','dev','eth4','root','fq','maxrate','{%.2f}Gbit'.format(rate)])
     return
 
 def getBytes():
@@ -126,8 +126,8 @@ def main():
 				#Code for testing random fq settings:
 				flowFound = True
 				#Code for calling controller
-				controllerRate = controller.Process(rtt)
-				if (i % 30 == 0)
+				controllerRate = controller.Process(rtt,rate)
+				if (i % 30 == 0):
 					rate = controllerRate
 					setfq(rate)
 				writer.writerow([rtt,controllerRate,rate,tput,retrans,cwnd,mss])
