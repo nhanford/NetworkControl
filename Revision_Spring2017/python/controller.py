@@ -30,7 +30,7 @@ class Controller:
         # Most recent prediction.
         self.l_hat_ = self.model_.Predict()
 
-    def Process(self, l, r):
+    def Process(self, l, r=None):
         """
         Process a new latency/control pair. Two steps:
         (1) updates internal model, and
@@ -52,8 +52,11 @@ class Controller:
         #r_opt = 0.1
 #        print self.model_.b_[0]
 
-
-        self.model_.r_.appendleft(r)
-        self.l_hat_ += self.model_.b_[0] * r
+        if r is not None:
+            self.model_.r_.appendleft(r)
+            self.l_hat_ += self.model_.b_[0] * r
+        else:
+            self.model_.r_.appendleft(r_opt)
+            self.l_hat_ += self.model_.b_[0] * r_opt
 
         return r_opt
