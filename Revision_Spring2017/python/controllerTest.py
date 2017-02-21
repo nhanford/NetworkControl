@@ -114,27 +114,27 @@ def main():
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
     rate,controllerRate = -1,-1
     with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
-		writer = csv.writer(output)
-		writer.writerow(['rtt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
-		for i in range(20000):
-			time.sleep(.01)
-			newBytes = getBytes()
-			ssout = pollss()
-			#edited throughput for ms instead of s--not terribly confident...
-			tput = ((newBytes - oldBytes) * 8) / float(1000)
-			ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
-			if rtt > 0:
-				#Code for testing random fq settings:
-				flowFound = True
-				#Code for calling controller
-				rate = controller.Process(rtt,rate)
-				setfq(rate)
-				writer.writerow([rtt,rate,tput,retrans,cwnd,mss])
-			elif (flowFound == True):
-				break
-			oldBytes = newBytes
+        writer = csv.writer(output)
+        writer.writerow(['rtt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
+        for i in range(20000):
+            time.sleep(.01)
+            newBytes = getBytes()
+            ssout = pollss()
+            #edited throughput for ms instead of s--not terribly confident...
+            tput = ((newBytes - oldBytes) * 8) / float(1000)
+            ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+            if rtt > 0:
+                #Code for testing random fq settings:
+                flowFound = True
+                #Code for calling controller
+                rate = controller.Process(rtt,rate)
+                setfq(rate)
+                writer.writerow([rtt,rate,tput,retrans,cwnd,mss])
+            elif (flowFound == True):
+                break
+            oldBytes = newBytes
     shutil.copy(output.name, 'output.csv')
     os.unlink(output.name)
-	subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
+    subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
 if __name__ =='__main__':
     main()
