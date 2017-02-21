@@ -107,7 +107,7 @@ def getBytes():
 
 def main():
     subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-p'])
+    subprocess.Popen(['bwctl','-c','bost-pt1.es.net','-T','iperf3','-t30','--parsable','-p'])
     intervalNum = 0
     oldBytes = getBytes()
     flowFound = False
