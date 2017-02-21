@@ -126,11 +126,9 @@ def main():
 				#Code for testing random fq settings:
 				flowFound = True
 				#Code for calling controller
-				controllerRate = controller.Process(rtt,rate)
-				if (i % 30 == 0):
-					rate = controllerRate
-					setfq(rate)
-				writer.writerow([rtt,controllerRate,rate,tput,retrans,cwnd,mss])
+				rate = controller.Process(rtt,rate)
+				setfq(rate)
+				writer.writerow([rtt,rate,tput,retrans,cwnd,mss])
 			elif (flowFound == True):
 				break
 			oldBytes = newBytes
