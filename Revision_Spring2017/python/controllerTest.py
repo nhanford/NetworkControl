@@ -106,6 +106,7 @@ def getBytes():
     return out
 
 def main():
+    subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
     subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-d','iOutput.json'])
     intervalNum = 0
     oldBytes = getBytes()
@@ -134,6 +135,6 @@ def main():
 			oldBytes = newBytes
     shutil.copy(output.name, 'output.csv')
     os.unlink(output.name)
-
+	subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
 if __name__ =='__main__':
     main()
