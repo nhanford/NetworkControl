@@ -18,7 +18,7 @@ P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 5.0
+PSI = 10.0
 XI = 5.0
 GAMMA = 0.5
 
