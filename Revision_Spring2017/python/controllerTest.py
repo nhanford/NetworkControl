@@ -18,7 +18,7 @@ P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 50.0
+PSI = 100.0
 XI = 5.0
 GAMMA = 0.5
 
@@ -107,7 +107,7 @@ def getBytes():
 
 def main():
     subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t30','--parsable','-p'])
+    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
     intervalNum = 0
     oldBytes = getBytes()
     flowFound = False
