@@ -106,35 +106,57 @@ def getBytes():
     return out
 
 def main():
-    subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
+    #Initialize values
     intervalNum = 0
-    oldBytes = getBytes()
+    nominalrtt = -1
+    rate,controllerRate = -1,-1
+    oldrtt = -1
     flowFound = False
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
-    rate,controllerRate = -1,-1
+    #Set qdisc
+    subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
+    #Start bwctl
+    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
+    #Initialize bytes for throughput count
+    oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['rtt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
+        writer.writerow(['ertt','samplertt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
         for i in range(20000):
             time.sleep(.01)
-            newBytes = getBytes()
+            #Get throughput every 100ms
+            if i%10 == 0:
+                newBytes = getBytes()
+                tput = ((newBytes - oldBytes) * 8) / float(1000)
+            #Get flow stats evkery 10ms
             ssout = pollss()
-            #edited throughput for ms instead of s--not terribly confident...
-            tput = ((newBytes - oldBytes) * 8) / float(1000)
             ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+            #When the flow is actually occurring
             if rtt > 0:
-                #Code for testing random fq settings:
                 flowFound = True
+                #Inversion of RTT to sample RTT
+                if oldrtt == -1:
+                    oldrtt = rtt
+                elif nominalrtt<0 or rtt<nominalrtt:
+                    nominalrtt = rtt
+                delta = rtt-oldrtt
+                samplertt = oldrtt + (delta * 8)
+                if samplertt < 0:
+                    if nominalrtt > 0:
+                        samplertt = nominalrtt
+                    else:
+                        samplertt = 1
                 #Code for calling controller
-                rate = controller.Process(rtt,rate)
+                rate = controller.Process(samplertt,rate)
                 setfq(rate)
-                writer.writerow([rtt,rate,tput,retrans,cwnd,mss])
-            elif (flowFound == True):
+                writer.writerow([rtt,samplertt,rate,tput,retrans,cwnd,mss])
+            elif flowFound == True:
                 break
             oldBytes = newBytes
+    #
     shutil.copy(output.name, 'output.csv')
     os.unlink(output.name)
+    #Delete qdisc
     subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
 if __name__ =='__main__':
     main()
