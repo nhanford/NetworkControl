@@ -19,7 +19,7 @@ Q = 1
 
 # Controller parameters.
 PSI = 0.0
-XI = 1000.0
+XI = 0.5
 GAMMA = 0.5
 
 # Latency generator parameters.
@@ -152,6 +152,7 @@ def main():
                 writer.writerow([rtt,samplertt,rate,tput,retrans,cwnd,mss])
             elif flowFound == True:
                 break
+            oldrtt = rtt
             oldBytes = newBytes
     #
     shutil.copy(output.name, 'output.csv')
