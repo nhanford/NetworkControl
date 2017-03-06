@@ -53,7 +53,7 @@ class Controller:
         r_opt = (self.mu_ - self.l_hat_ +
                      ((self.xi_ - self.model_.b_[0]) /
                                (self.psi_ * self.model_.b_[0]))) /
-                             self.model_.b_[0]
+                                    self.model_.b_[0]
 
     r_opt = max(0.1, min(r_opt, 34.35))
 
