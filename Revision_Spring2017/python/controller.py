@@ -46,11 +46,11 @@ class Controller:
 
     if abs(self.psi_) < 1e-16: 
         if self.model_.b_[0] - self.xi_ < 0.0:
-        r_opt = 1000.0
+            r_opt = 1000.0
         else:
-        r_opt = -1000.0
+            r_opt = -1000.0
         else:
-        r_opt = (self.mu_ - self.l_hat_ +
+            r_opt = (self.mu_ - self.l_hat_ +
                      ((self.xi_ - self.model_.b_[0]) /
                                (self.psi_ * self.model_.b_[0]))) /
                              self.model_.b_[0]
