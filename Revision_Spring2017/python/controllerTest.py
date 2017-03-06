@@ -18,8 +18,8 @@ P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 100.0
-XI = 5.0
+PSI = 0.0
+XI = 0.1
 GAMMA = 0.5
 
 # Latency generator parameters.
