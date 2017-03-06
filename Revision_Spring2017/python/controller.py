@@ -44,23 +44,23 @@ class Controller:
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
         self.l_hat_ = self.model_.Predict(0.0, True)
 
-    if abs(self.psi_) < 1e-16: 
-        if self.model_.b_[0] - self.xi_ < 0.0:
-            r_opt = 1000.0
+        if abs(self.psi_) < 1e-16: 
+            if self.model_.b_[0] - self.xi_ < 0.0:
+                r_opt = 1000.0
+            else:
+                r_opt = -1000.0
         else:
-            r_opt = -1000.0
-    else:
-        r_opt = (self.mu_ - self.l_hat_ +
-                     ((self.xi_ - self.model_.b_[0]) /
-                               (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0]
+            r_opt = (self.mu_ - self.l_hat_ +
+                         ((self.xi_ - self.model_.b_[0]) /
+                                   (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0]
 
-    r_opt = max(0.1, min(r_opt, 34.35))
+        r_opt = max(0.1, min(r_opt, 34.35))
 
-    if r is not None:
-        self.model_.r_.appendleft(r)
-        self.l_hat_ += self.model_.b_[0] * r
-    else:
-        self.model_.r_.appendleft(r_opt)
-        self.l_hat_ += self.model_.b_[0] * r_opt
+        if r is not None:
+            self.model_.r_.appendleft(r)
+            self.l_hat_ += self.model_.b_[0] * r
+        else:
+            self.model_.r_.appendleft(r_opt)
+            self.l_hat_ += self.model_.b_[0] * r_opt
 
-    return r_opt
+        return r_opt
