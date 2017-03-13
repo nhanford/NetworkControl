@@ -167,6 +167,8 @@ def main():
     #Write out the temporary controller logic file
     shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-controlOutput.csv')
     os.unlink(output.name)
+    #Wait 10 seconds for bwctl output
+    time.sleep(10)
     #Convert the bwctl json file to csv
     for basename in os.listdir('.'):
         if basename.endswith('.bw'):
