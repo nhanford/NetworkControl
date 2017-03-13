@@ -1,14 +1,17 @@
 #!/usr/bin/python
 '''
-livetest.py -- Applies control to FQ-CoDel pacing qdisc.
+controllerTest.py -- Applies control to FQ-CoDel pacing qdisc.
 livetest is designed for any Linux distribution with tc_fq available in 
 its iproute2 package
 
+Apologies for the lack of neatness. This is scratch code.
+
 @author: Nathan Hanford
-@contact: nhanford@es.net
+@contact: nhanford@ucdavis.edu
 @deffield: updated: Updated
+
 '''
-import sys,os,re,subprocess,socket,sched,time,datetime,threading,struct,argparse,json,logging,warnings,csv,random,tempfile,shutil
+import sys, os, re, subprocess, socket, sched, time, datetime, threading, struct, argparse, json, logging, warnings, csv, random, tempfile, shutil
 from controller import Controller
 
 # Adaptive filter parameters.
@@ -18,8 +21,6 @@ P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 0.0
-XI = 1.0
 GAMMA = 0.5
 
 # Latency generator parameters.
@@ -87,6 +88,7 @@ def parseconnection(connection):
     return -1,-1,-1,-1,-1,-1,-1
 
 def findconn(connections):
+    '''given a list of connections, return the connection matching the hardcoded values'''
     for connection in connections:
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
         if ips[0]=='10.2.2.2' and ips[1]=='198.129.254.14' and 4999<ports[1]<6000 and cwnd>10:
@@ -94,6 +96,7 @@ def findconn(connections):
     return -1,-1,-1,-1,-1,-1,-1
 
 def setfq(rate):
+    '''set the fq pacing rate'''
     subprocess.check_call(['tc','qdisc','change','dev','eth4','root','fq','maxrate','{0:.2f}Gbit'.format(rate)])
     return
 
@@ -106,6 +109,13 @@ def getBytes():
     return out
 
 def main():
+    #Parse input values
+    parser = argparse.ArgumentParser()
+    parser.add_argument('XI', type=float)
+    parser.add_argument('PSI', type=float)
+    args = parser.parse_args()
+    XI = args.XI
+    PSI = args.PSI
     #Initialize values
     intervalNum = 0
     nominalrtt = -1
@@ -154,10 +164,26 @@ def main():
                 break
             oldrtt = rtt
             oldBytes = newBytes
-    #
-    shutil.copy(output.name, 'output.csv')
+    #Write out the temporary controller logic file
+    shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-controlOutput.csv')
     os.unlink(output.name)
+    #Convert the bwctl json file to csv
+    for basename in os.listdir('.'):
+        if basename.endswith('.bw'):
+            with open(basename) as fp:
+                data = json.load(fp)
+            newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-iPerfOutput.csv'
+            with open(newpath,'wb') as ofp:
+                writer=csv.writer(ofp)
+                title =  data['intervals'][0]['streams'][0].keys()
+                if 'omitted' in title: title.remove('omitted')
+                writer.writerow(title)
+                for interval in data['intervals']:
+                    del(interval['streams'][0]['omitted'])
+                    vals = interval['streams'][0].values()
+                    writer.writerow(vals)
     #Delete qdisc
     subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
+    sys.exit()
 if __name__ =='__main__':
     main()

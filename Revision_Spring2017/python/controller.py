@@ -44,7 +44,7 @@ class Controller:
         self.mu_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_
         self.l_hat_ = self.model_.Predict(0.0, True)
 
-        if abs(self.psi_) < 1e-16: 
+        if abs(self.psi_) < 1e-16:
             if self.model_.b_[0] - self.xi_ < 0.0:
                 r_opt = 1000.0
             else:
