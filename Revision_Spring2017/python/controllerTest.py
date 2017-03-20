@@ -118,7 +118,7 @@ def main():
     PSI = args.PSI
     #Initialize values
     intervalNum = 0
-    nominalrtt = -1
+    nominalrtt = 26.0
     rate,controllerRate = -1,-1
     oldrtt = -1
     flowFound = False
@@ -147,8 +147,8 @@ def main():
                 #Inversion of RTT to sample RTT
                 if oldrtt == -1:
                     oldrtt = rtt
-                elif nominalrtt<0 or rtt<nominalrtt:
-                    nominalrtt = rtt
+                #elif nominalrtt<0 or rtt<nominalrtt: #stopped finding the lowest RTT
+                #    nominalrtt = rtt
                 delta = rtt-oldrtt
                 samplertt = oldrtt + (delta * 8)
                 if samplertt < 0:
