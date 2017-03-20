@@ -133,7 +133,7 @@ def main():
         writer = csv.writer(output)
         writer.writerow(['ertt','samplertt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
         for i in range(20000):
-            time.sleep(.01)
+            time.sleep(.02)
             #Get throughput every 100ms
             if i%10 == 0:
                 newBytes = getBytes()
