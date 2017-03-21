@@ -151,11 +151,13 @@ def main():
                 #    nominalrtt = rtt
                 delta = rtt-oldrtt
                 samplertt = oldrtt + (delta * 8)
-                if samplertt < 0:
-                    if nominalrtt > 0:
-                        samplertt = nominalrtt
-                    else:
-                        samplertt = 1
+                if samplertt < nominalrtt:
+                    samplertt = nominalrtt
+                    print('samplertt was less than nominal')
+                    #if nominalrtt > 0:
+                    #    samplertt = nominalrtt
+                    #else:
+                    #    samplertt = 1
                 #Code for calling controller
                 rate = controller.Process(samplertt,rate)
                 setfq(rate)
