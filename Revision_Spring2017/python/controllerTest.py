@@ -153,7 +153,7 @@ def main():
                 samplertt = oldrtt + (delta * 8)
                 if samplertt < nominalrtt:
                     samplertt = nominalrtt
-                    print('samplertt was less than nominal')
+                    #print('samplertt was less than nominal')
                     #if nominalrtt > 0:
                     #    samplertt = nominalrtt
                     #else:
