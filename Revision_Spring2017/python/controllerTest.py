@@ -91,7 +91,9 @@ def findconn(connections):
     '''given a list of connections, return the connection matching the hardcoded values'''
     for connection in connections:
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
-        if ips[0]=='10.2.2.2' and ips[1]=='198.129.254.14' and 4999<ports[1]<6000 and cwnd>10:
+        #bost-pt1 198.124.238.66
+        #denv-pt1 198.129.254.14
+        if ips[0]=='10.2.2.2' and ips[1]=='198.124.238.66' and 4999<ports[1]<6000 and cwnd>10:
             return ips,ports,rtt,wscaleavg,cwnd,retrans,mss
     return -1,-1,-1,-1,-1,-1,-1
 
@@ -126,7 +128,7 @@ def main():
     #Set qdisc
     subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
     #Start bwctl
-    subprocess.Popen(['bwctl','-c','denv-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
+    subprocess.Popen(['bwctl','-c','bost-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
