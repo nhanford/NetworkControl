@@ -1,7 +1,7 @@
 #!/usr/bin/python
 '''
 controllerTest.py -- Applies control to FQ-CoDel pacing qdisc.
-livetest is designed for any Linux distribution with tc_fq available in 
+livetest is designed for any Linux distribution with tc_fq available in
 its iproute2 package
 
 Apologies for the lack of neatness. This is scratch code.
@@ -11,7 +11,17 @@ Apologies for the lack of neatness. This is scratch code.
 @deffield: updated: Updated
 
 '''
-import sys, os, re, subprocess, socket, sched, time, datetime, threading, struct, argparse, json, logging, warnings, csv, random, tempfile, shutil
+import sys
+import os
+import re
+import logging
+import subprocess
+import time
+import argparse
+import json
+import csv
+import tempfile
+import shutil
 from controller import Controller
 
 # Adaptive filter parameters.
@@ -32,9 +42,9 @@ NOISE_SD = 0.0
 
 def pollss():
     '''gets data from ss'''
-    out = subprocess.check_output(['ss','-i','-t','-n'])
-    out = re.sub('\A.+\n','',out)
-    out = re.sub('\n\t','',out)
+    out = subprocess.check_output(['ss', '-i', '-t', '-n'])
+    out = re.sub(r'\A.+\n', '', out)
+    out = re.sub(r'\n\t', '', out)
     out = out.splitlines()
     return out
 
@@ -43,18 +53,18 @@ def parseconnection(connection):
     #Junk gets filtered in @loadconnections
     try:
         connection = connection.strip()
-        ordered = re.sub(':|,|/|Mbps',' ',connection)
+        ordered = re.sub(r':|,|/|Mbps', ' ', connection)
         ordered = connection.split()
-        ips = re.findall('\d+\.\d+\.\d+\.\d+',connection)
-        ports = re.findall('\d:\w+',connection)
-        rtt = re.search('rtt:\d+[.]?\d+',connection)
-        wscaleavg = re.search('wscale:\d+',connection)
-        mss = re.search('mss:\d+',connection)
-        cwnd = re.search('cwnd:\d+',connection)
-        retrans = re.search('retrans:\d+\/\d+',connection)
+        ips = re.findall(r'\d+\.\d+\.\d+\.\d+', connection)
+        ports = re.findall(r'\d:\w+', connection)
+        rtt = re.search(r'rtt:\d+[.]?\d+', connection)
+        wscaleavg = re.search(r'wscale:\d+', connection)
+        mss = re.search(r'mss:\d+', connection)
+        cwnd = re.search(r'cwnd:\d+', connection)
+        retrans = re.search(r'retrans:\d+\/\d+', connection)
     except Exception as e:
         logging.warning('connection {} could not be parsed'.format(connection))
-        return -1,-1,-1,-1,-1,-1,-1
+        return -1, -1, -1, -1, -1, -1, -1
     if rtt:
         rtt = float(rtt.group(0)[4:])
     else:
@@ -71,7 +81,7 @@ def parseconnection(connection):
         cwnd = -1
     if retrans:
         retrans = retrans.group(0)
-        retrans = re.sub('retrans:\d+\/','',retrans)
+        retrans = re.sub(r'retrans:\d+\/', '', retrans)
         retrans = int(retrans)
     else:
         retrans = -1
@@ -85,7 +95,7 @@ def parseconnection(connection):
         ports[1] = int(ports[1][2:])
         return ips, ports, rtt, wscaleavg, cwnd, retrans, mss
     logging.warning('connection {} could not be parsed'.format(connection))
-    return -1,-1,-1,-1,-1,-1,-1
+    return -1, -1, -1, -1, -1, -1, -1
 
 def findconn(connections):
     '''given a list of connections, return the connection matching the hardcoded values'''
@@ -93,18 +103,18 @@ def findconn(connections):
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
         #bost-pt1 198.124.238.66
         #denv-pt1 198.129.254.14
-        if ips[0]=='10.2.2.2' and ips[1]=='198.124.238.66' and 4999<ports[1]<6000 and cwnd>10:
-            return ips,ports,rtt,wscaleavg,cwnd,retrans,mss
-    return -1,-1,-1,-1,-1,-1,-1
+        if ips[0] == '10.2.2.2' and ips[1] == '198.124.238.66' and 4999 < ports[1] < 6000 and cwnd > 10:
+            return ips, ports, rtt, wscaleavg, cwnd, retrans, mss
+    return -1, -1, -1, -1, -1, -1, -1
 
 def setfq(rate):
     '''set the fq pacing rate'''
-    subprocess.check_call(['tc','qdisc','change','dev','eth4','root','fq','maxrate','{0:.2f}Gbit'.format(rate)])
+    subprocess.check_call(['tc', 'qdisc', 'change', 'dev', 'eth4', 'root', 'fq', 'maxrate', '{0:.2f}Gbit'.format(rate)])
     return
 
 def getBytes():
-    out = subprocess.check_output(['ifconfig','eth3'])
-    out = re.search('TX bytes:\d+',out)
+    out = subprocess.check_output(['ifconfig', 'eth3'])
+    out = re.search(r'TX bytes:\d+', out)
     out = out.group()
     out = out[9:]
     out = int(out)
@@ -121,19 +131,19 @@ def main():
     #Initialize values
     intervalNum = 0
     nominalrtt = 26.0
-    rate,controllerRate = -1,-1
+    rate, controllerRate = -1, -1
     oldrtt = -1
     flowFound = False
     controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
     #Set qdisc
-    subprocess.check_call(['tc','qdisc','add','dev','eth4','root','fq'])
+    subprocess.check_call(['tc', 'qdisc', 'add', 'dev', 'eth4', 'root', 'fq'])
     #Start bwctl
-    subprocess.Popen(['bwctl','-c','bost-pt1.es.net','-T','iperf3','-t60','--parsable','-p'])
+    subprocess.Popen(['bwctl', '-c', 'bost-pt1.es.net', '-T', 'iperf3', '-t60', '--parsable', '-p'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
-    with tempfile.NamedTemporaryFile(suffix='.csv',delete=False) as output:
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['ertt','samplertt','controlRate','setRate','throughput','retransmits','cwnd','mss'])
+        writer.writerow(['ertt', 'samplertt', 'controlRate', 'setRate', 'throughput', 'retransmits', 'cwnd', 'mss'])
         for i in range(20000):
             time.sleep(.02)
             #Get throughput every 100ms
@@ -161,10 +171,10 @@ def main():
                     #else:
                     #    samplertt = 1
                 #Code for calling controller
-                rate = controller.Process(samplertt,rate)
+                rate = controller.Process(samplertt, rate)
                 setfq(rate)
-                writer.writerow([rtt,samplertt,rate,tput,retrans,cwnd,mss])
-            elif flowFound == True:
+                writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss])
+            elif flowFound:
                 break
             oldrtt = rtt
             oldBytes = newBytes
@@ -179,17 +189,17 @@ def main():
             with open(basename) as fp:
                 data = json.load(fp)
             newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-iPerfOutput.csv'
-            with open(newpath,'wb') as ofp:
-                writer=csv.writer(ofp)
-                title =  data['intervals'][0]['streams'][0].keys()
+            with open(newpath, 'wb') as ofp:
+                writer = csv.writer(ofp)
+                title = data['intervals'][0]['streams'][0].keys()
                 if 'omitted' in title: title.remove('omitted')
                 writer.writerow(title)
                 for interval in data['intervals']:
-                    del(interval['streams'][0]['omitted'])
+                    del interval['streams'][0]['omitted']
                     vals = interval['streams'][0].values()
                     writer.writerow(vals)
     #Delete qdisc
-    subprocess.check_call(['tc','qdisc','del','dev','eth4','root'])
+    subprocess.check_call(['tc', 'qdisc', 'del', 'dev', 'eth4', 'root'])
     sys.exit()
-if __name__ =='__main__':
+if __name__ == '__main__':
     main()
