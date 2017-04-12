@@ -130,7 +130,7 @@ def main():
     PSI = args.PSI
     #Initialize values
     intervalNum = 0
-    nominalrtt = 26.0
+    nominalrtt = 70.0
     rate, controllerRate = -1, -1
     oldrtt = -1
     flowFound = False
