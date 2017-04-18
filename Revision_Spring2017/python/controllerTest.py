@@ -158,7 +158,7 @@ def main():
             #Get flow stats evkery 10ms
             ssout = pollss()
             ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout,dest)
-            print dest, ssout
+            print findconn(ssout, dest)
             #When the flow is actually occurring
             if rtt > 0:
                 flowFound = True
