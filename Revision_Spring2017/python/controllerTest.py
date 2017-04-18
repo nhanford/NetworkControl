@@ -22,6 +22,7 @@ import json
 import csv
 import tempfile
 import shutil
+import socket
 from controller import Controller
 
 # Adaptive filter parameters.
@@ -97,13 +98,14 @@ def parseconnection(connection):
     logging.warning('connection {} could not be parsed'.format(connection))
     return -1, -1, -1, -1, -1, -1, -1
 
-def findconn(connections):
+def findconn(connections,dest):
     '''given a list of connections, return the connection matching the hardcoded values'''
+    ip = str(socket.gethostbyname(dest))
     for connection in connections:
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
         #bost-pt1 198.124.238.66
         #denv-pt1 198.129.254.14
-        if ips[0] == '10.2.2.2' and ips[1] == '198.124.238.66' and 4999 < ports[1] < 6000 and cwnd > 10:
+        if ips[0] == '10.2.2.2' and ips[1] == ip and 4999 < ports[1] < 6000 and cwnd > 10:
             return ips, ports, rtt, wscaleavg, cwnd, retrans, mss
     return -1, -1, -1, -1, -1, -1, -1
 
@@ -125,12 +127,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('XI', type=float)
     parser.add_argument('PSI', type=float)
+    parser.add_argument('DEST')
+    parser.add_argument('RTT', type=float)
     args = parser.parse_args()
     XI = args.XI
     PSI = args.PSI
+    dest = args.DEST
+    nominalrtt = args.RTT
     #Initialize values
     intervalNum = 0
-    nominalrtt = 70.0
     rate, controllerRate = -1, -1
     oldrtt = -1
     flowFound = False
@@ -138,7 +143,7 @@ def main():
     #Set qdisc
     subprocess.check_call(['tc', 'qdisc', 'add', 'dev', 'eth4', 'root', 'fq'])
     #Start bwctl
-    subprocess.Popen(['bwctl', '-c', 'bost-pt1.es.net', '-T', 'iperf3', '-t60', '--parsable', '-p'])
+    subprocess.Popen(['bwctl', '-c', dest, '-T', 'iperf3', '-t60', '--parsable', '-p'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
@@ -152,7 +157,7 @@ def main():
                 tput = ((newBytes - oldBytes) * 8) / float(1000)
             #Get flow stats evkery 10ms
             ssout = pollss()
-            ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout)
+            ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout,dest)
             #When the flow is actually occurring
             if rtt > 0:
                 flowFound = True
