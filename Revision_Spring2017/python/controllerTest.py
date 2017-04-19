@@ -148,12 +148,13 @@ def main():
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['ertt', 'samplertt', 'controlRate', 'setRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
+        writer.writerow(['ertt', 'samplertt', 'controlRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
         for i in range(20000):
             time.sleep(.02)
             #Get throughput every 100ms
             if i%10 == 0:
                 newBytes = getBytes()
+                print newBytes, oldBytes, '/n/n'
                 tput = ((newBytes - oldBytes) * 8) / float(1000)
             #Get flow stats evkery 10ms
             ssout = pollss()
