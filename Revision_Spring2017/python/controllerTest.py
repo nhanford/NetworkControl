@@ -148,7 +148,7 @@ def main():
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['ertt', 'samplertt', 'controlRate', 'setRate', 'throughput', 'retransmits', 'cwnd', 'mss'])
+        writer.writerow(['ertt', 'samplertt', 'controlRate', 'setRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
         for i in range(20000):
             time.sleep(.02)
             #Get throughput every 100ms
@@ -158,7 +158,6 @@ def main():
             #Get flow stats evkery 10ms
             ssout = pollss()
             ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout,dest)
-            #print findconn(ssout, dest)
             #When the flow is actually occurring
             if rtt > 0:
                 flowFound = True
@@ -179,7 +178,7 @@ def main():
                 #Code for calling controller
                 rate = controller.Process(samplertt, rate)
                 setfq(rate)
-                writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss])
+                writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
             oldrtt = rtt
