@@ -144,7 +144,7 @@ def main():
     subprocess.check_call(['tc', 'qdisc', 'add', 'dev', 'eth4', 'root', 'fq'])
     #Start bwctl
     #subprocess.Popen(['bwctl', '-c', dest, '-T', 'iperf3', '-t60', '--parsable', '-p'])
-    subprocess.Popen(['iperf3','-c',dest,'-t60','--logfile','out.bw'])
+    subprocess.Popen(['iperf3','-c',dest,'-Jt60','--logfile','out.bw'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
