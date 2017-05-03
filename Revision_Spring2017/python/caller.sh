@@ -11,3 +11,7 @@ do
         sleep 2
     done
 done
+chown nate *.csv
+chmod +r *.csv 
+mkdir ~/`date +%F`
+mv *.csv ~/`date +%F`/
