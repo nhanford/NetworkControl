@@ -177,7 +177,7 @@ def main():
                     #else:
                     #    samplertt = 1
                 #Code for calling controller
-                rate = controller.Process(samplertt, rate)
+                rate = controller.Process(rtt, rate)
                 setfq(rate)
                 writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
