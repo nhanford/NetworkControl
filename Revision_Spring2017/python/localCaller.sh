@@ -7,6 +7,7 @@ do
     mv localControlOutput.csv controlOutput-$j.csv
     mv XI-0.997-PSI-100.0-iPerfOutput.csv iPerfOutput-$j.csv
     rm *.bw
+    tc qdisc del dev eth4 root
     sleep 2
 done
 chown nate *.csv
