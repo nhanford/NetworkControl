@@ -8,6 +8,7 @@ do
         sleep 5
         mv XI-0.997-PSI-100.0-controlOutput.csv controlOutput-$i-$j.csv
         mv XI-0.997-PSI-100.0-iPerfOutput.csv iPerfOutput-$i-$j.csv
+        rm *.bw
         sleep 2
     done
 done
