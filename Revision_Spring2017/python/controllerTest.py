@@ -129,12 +129,14 @@ def main():
     parser.add_argument('PSI', type=float)
     parser.add_argument('DEST')
     parser.add_argument('TESTNO')
+    parser.add_argument('CONTROLON', action='store_true')
     #parser.add_argument('RTT', type=float)
     args = parser.parse_args()
     XI = args.XI
     PSI = args.PSI
     dest = args.DEST
     add = args.TESTNO
+    on = args.CONTROLON
     #nominalrtt = args.RTT
     #Initialize values
     intervalNum = 0
@@ -157,7 +159,7 @@ def main():
             if i%10 == 0:
                 newBytes = getBytes()
                 tput = ((newBytes - oldBytes) * 8) / float(1000)
-            #Get flow stats evkery 10ms
+            #Get flow stats every 10ms
             ssout = pollss()
             ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout,dest)
             #When the flow is actually occurring
@@ -179,7 +181,8 @@ def main():
                     #    samplertt = 1
                 #Code for calling controller
                 rate = controller.Process(rtt, rate)
-                setfq(rate)
+                if on:
+                    setfq(rate)
                 writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
