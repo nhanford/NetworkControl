@@ -128,12 +128,16 @@ def main():
     parser.add_argument('XI', type=float)
     parser.add_argument('PSI', type=float)
     parser.add_argument('DEST')
-    parser.add_argument('RTT', type=float)
+    parser.add_argument('TESTNO')
+    parser.add_argument('CONTROLON', action='store_true')
+    #parser.add_argument('RTT', type=float)
     args = parser.parse_args()
     XI = args.XI
     PSI = args.PSI
     dest = args.DEST
-    nominalrtt = args.RTT
+    add = args.TESTNO
+    on = args.CONTROLON
+    #nominalrtt = args.RTT
     #Initialize values
     intervalNum = 0
     rate, controllerRate = -1, -1
@@ -169,8 +173,8 @@ def main():
                 #    nominalrtt = rtt
                 delta = rtt-oldrtt
                 samplertt = oldrtt + (delta * 8)
-                if samplertt < nominalrtt:
-                    samplertt = nominalrtt
+                #if samplertt < nominalrtt:
+                #    samplertt = nominalrtt
                     #print('samplertt was less than nominal')
                     #if nominalrtt > 0:
                     #    samplertt = nominalrtt

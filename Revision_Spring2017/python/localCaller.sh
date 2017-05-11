@@ -16,7 +16,7 @@ tc qdisc del dev eth4 root
 
 for j in {1..5}
 do
-    python localControllerTest.py .997 100 192.168.1.1 $j
+    python localControllerTest.py .997 100 192.168.1.1
     sleep 5
     rm *.bw
     tc qdisc del dev eth4 root
