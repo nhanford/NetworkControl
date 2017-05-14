@@ -100,7 +100,7 @@ def parseconnection(connection):
 
 def findconn(connections,dest):
     '''given a list of connections, return the connection matching the hardcoded values'''
-    ip = str(socket.gethostbyname(dest))
+    ip = socket.gethostbyname(dest)
     for connection in connections:
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
         #bost-pt1 198.124.238.66
@@ -188,8 +188,11 @@ def main():
                 break
             oldrtt = rtt
             oldBytes = newBytes
+    controlStat = 'off'
+    if on:
+        controlStat = 'on'
     #Write out the temporary controller logic file
-    shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-controlOutput.csv')
+    shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-'+controlStat+'-controlOutput.csv')
     os.unlink(output.name)
     #Wait 10 seconds for bwctl output
     time.sleep(10)
@@ -198,7 +201,7 @@ def main():
         if basename.endswith('.bw'):
             with open(basename) as fp:
                 data = json.load(fp)
-            newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-iPerfOutput.csv'
+            newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-'+controlStat+'-iPerfOutput.csv'
             with open(newpath, 'wb') as ofp:
                 writer = csv.writer(ofp)
                 title = data['intervals'][0]['streams'][0].keys()

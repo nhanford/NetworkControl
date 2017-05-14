@@ -20,9 +20,10 @@ do
     sleep 5
     rm *.bw
     tc qdisc del dev eth4 root
+    python localControllerTest.py .997 100 192.168.1.1
     sleep 2
 done
 chown nate *.csv
 chmod +r *.csv 
-mkdir ~/`date +%F`
-mv *.csv ~/`date +%F`/
+mkdir ~/`date +%F-%H-%M`
+mv *.csv ~/`date +%F-%H-%M`/

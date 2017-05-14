@@ -189,7 +189,7 @@ def main():
             oldrtt = rtt
             oldBytes = newBytes
     #Write out the temporary controller logic file
-    shutil.copy2(output.name, 'localControlOutput.csv')
+    shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-'+controlStat+'-controlOutput.csv')
     os.unlink(output.name)
     #Wait 10 seconds for bwctl output
     time.sleep(10)
@@ -198,7 +198,7 @@ def main():
         if basename.endswith('.bw'):
             with open(basename) as fp:
                 data = json.load(fp)
-            newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-iPerfOutput.csv'
+            newpath = 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-'+controlStat+'-iPerfOutput.csv'
             with open(newpath, 'wb') as ofp:
                 writer = csv.writer(ofp)
                 title = data['intervals'][0]['streams'][0].keys()
