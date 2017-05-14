@@ -18,7 +18,7 @@ for i in bost bois anl sacr
 do
     for j in {1..3}
     do
-        python controllerTest.py 1 100 $i-pt1.es.net $j on
+        python controllerTest.py 1 100 $i-pt1.es.net $j --on
         sleep 5
         rm *.bw
         python controllerTest.py 1 100 $i-pt1.es.net $j
