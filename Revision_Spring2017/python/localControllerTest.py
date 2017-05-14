@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 controllerTest.py -- Applies control to FQ-CoDel pacing qdisc.
 livetest is designed for any Linux distribution with tc_fq available in
