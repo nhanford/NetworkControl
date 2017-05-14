@@ -19,9 +19,12 @@ do
     for j in {1..3}
     do
         python controllerTest.py 1 100 $i-pt1.es.net $j --on
-        sleep 5
+        tc qdisc del dev eth4 root
+        sleep 2
         rm *.bw
         python controllerTest.py 1 100 $i-pt1.es.net $j
+        tc qdisc del dev eth4 root
+        rm *.bw
         sleep 2
     done
 done

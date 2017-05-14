@@ -17,10 +17,12 @@ tc qdisc del dev eth4 root
 for j in {1..5}
 do
     python localControllerTest.py .997 100 192.168.1.1 --on
-    sleep 5
+    sleep 2
     rm *.bw
     tc qdisc del dev eth4 root
     python localControllerTest.py .997 100 192.168.1.1
+    rm *.bw
+    tc qdisc del dev eth4 root
     sleep 2
 done
 chown nate *.csv
