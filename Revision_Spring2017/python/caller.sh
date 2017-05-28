@@ -18,7 +18,7 @@ for i in bost bois anl sacr
 do
     for j in {1..3}
     do
-        ssh nate@tilera "bwctl -T iperf3 -c $i-pt1.es.net -t60 --parsable -p" &
+        ssh nate@tilera "bwctl -T iperf3 -c sacr-pt1.es.net -t60 --parsable -p" &
         sudo python controllerTest.py 1 100 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
