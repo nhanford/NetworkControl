@@ -22,12 +22,12 @@ do
         sudo python controllerTest.py 1 100 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
-        sleep 2
+        sleep 10
         sudo rm *.bw
         sudo python controllerTest.py 1 100 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
+        sleep 10
         sudo rm *.bw
-        sleep 2
     done
 done
 sudo chown nate *.csv
