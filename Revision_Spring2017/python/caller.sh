@@ -24,8 +24,10 @@ do
         ssh nate@tilera "killall bwctl"
         sleep 10
         sudo rm *.bw
+        ssh nate@tilera "bwctl -T iperf3 -c sacr-pt1.es.net -t60 --parsable -p" &
         sudo python controllerTest.py 1 100 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
+        ssh nate@tilera "killall bwctl"
         sleep 10
         sudo rm *.bw
     done
