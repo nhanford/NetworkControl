@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo tc qdisc add dev eth4 root fq
-while 1:
+while :
 do 
     sleep .01
     sudo tc qdisc change dev eth4 root fq maxrate 20Gbit
