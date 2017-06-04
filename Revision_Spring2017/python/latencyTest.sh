@@ -12,7 +12,7 @@ done
 mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
 
-sudo pping -vi eth4
+sudo pping -vi eth4 &
 
 for i in bost bois anl sacr
 do
@@ -26,3 +26,5 @@ do
 done
 mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
+
+killall pping
