@@ -28,3 +28,4 @@ mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
 
 killall pping
+
