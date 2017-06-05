@@ -13,6 +13,7 @@ mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
 
 sudo pping -vi eth4 &
+./tcTest.sh &
 
 for i in bost bois anl sacr
 do
@@ -28,3 +29,4 @@ mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
 
 killall pping
+killall tcTest.sh
