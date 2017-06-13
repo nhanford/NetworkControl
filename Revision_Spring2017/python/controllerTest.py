@@ -145,7 +145,7 @@ def main():
     #Set qdisc
     subprocess.check_call(['tc', 'qdisc', 'add', 'dev', 'eth4', 'root', 'fq'])
     #Start bwctl
-    subprocess.Popen(['bwctl', '-c', dest, '-T', 'iperf3', '-i.1', '-t60', '--parsable', '-p'])
+    subprocess.Popen(['bwctl', '-c', dest, '-T', 'iperf3', '-i.1', '-w150m', '-t60', '--parsable', '-p'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
