@@ -14,18 +14,18 @@ sudo sysctl -w net.ipv4.tcp_congestion_control=htcp
 
 sudo tc qdisc del dev eth4 root
 
-for i in bost bois anl sacr
+for i in bost bois anl lbl
 do
     for j in {1..3}
     do
         ssh nate@tilera "bwctl -T iperf3 -w20m -c sacr-pt1.es.net -t60 --parsable -p" &
-        sudo python controllerTest.py 1 10 $i-pt1.es.net $j --on
+        sudo python controllerTest.py 1 500 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
         sleep 10
         sudo rm *.bw
         ssh nate@tilera "bwctl -T iperf3 -w20m -c sacr-pt1.es.net -t60 --parsable -p" &
-        sudo python controllerTest.py 1 10 $i-pt1.es.net $j
+        sudo python controllerTest.py 1 500 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
         sleep 10
