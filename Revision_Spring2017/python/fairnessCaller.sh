@@ -19,13 +19,13 @@ do
     for j in {1..3}
     do
         ssh nate@tilera "bwctl -T iperf3 -w20m -c sacr-pt1.es.net -t60 --parsable -p" &
-        sudo python controllerTest.py 1 500 $i-pt1.es.net $j --on
+        sudo python controllerTest.py 1 754 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
         sleep 10
         sudo rm *.bw
         ssh nate@tilera "bwctl -T iperf3 -w20m -c sacr-pt1.es.net -t60 --parsable -p" &
-        sudo python controllerTest.py 1 500 $i-pt1.es.net $j
+        sudo python controllerTest.py 1 754 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
         ssh nate@tilera "killall bwctl"
         sleep 10
