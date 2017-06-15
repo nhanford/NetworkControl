@@ -14,15 +14,15 @@ sudo sysctl -w net.ipv4.tcp_congestion_control=htcp
 
 sudo tc qdisc del dev eth4 root
 
-for i in bost bois anl sacr
+for i in bost bois anl lbl
 do
     for j in {1..3}
     do
-        sudo python controllerTest.py 1 100 $i-pt1.es.net $j --on
+        sudo python controllerTest.py 10 100 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         sleep 10
         sudo rm *.bw
-        sudo python controllerTest.py 1 100 $i-pt1.es.net $j
+        sudo python controllerTest.py 10 100 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
         sleep 10
         sudo rm *.bw
