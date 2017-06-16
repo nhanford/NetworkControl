@@ -18,11 +18,11 @@ for i in bost bois anl lbl
 do
     for j in {1..3}
     do
-        sudo python controllerTest.py 100 500 $i-pt1.es.net $j --on
+        sudo python controllerTest.py 50 500 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
         sleep 10
         sudo rm *.bw
-        sudo python controllerTest.py 100 500 $i-pt1.es.net $j
+        sudo python controllerTest.py 50 500 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
         sleep 10
         sudo rm *.bw
