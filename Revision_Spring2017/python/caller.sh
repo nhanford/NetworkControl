@@ -20,12 +20,12 @@ do
     do
         sudo python controllerTest.py 30 300 $i-pt1.es.net $j --on
         sudo tc qdisc del dev eth4 root
-        echo sleeping\n
+        echo sleeping
         sleep 10
         sudo rm *.bw
         sudo python controllerTest.py 30 300 $i-pt1.es.net $j
         sudo tc qdisc del dev eth4 root
-        echo sleeping\n
+        echo sleeping
         sleep 10
         sudo rm *.bw
     done
