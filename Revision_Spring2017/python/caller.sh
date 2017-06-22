@@ -30,7 +30,7 @@ do
         sudo rm *.bw
     done
 done
-sudo chown nate *.csv
-chmod +r *.csv 
+
+
 mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
