@@ -27,7 +27,6 @@ from controller import Controller
 
 # Adaptive filter parameters.
 ALPHA = 0.5
-BETA = 0.5
 P = 5
 Q = 1
 
@@ -141,7 +140,7 @@ def main():
     rate, controllerRate = -1, -1
     oldrtt = -1
     flowFound = False
-    controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
+    controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
     #Set qdisc
     subprocess.check_call(['tc', 'qdisc', 'add', 'dev', 'eth4', 'root', 'fq'])
     #Start bwctl

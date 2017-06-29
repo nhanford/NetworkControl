@@ -12,13 +12,12 @@ from collections import deque
 
 class AdaptiveFilter:
 
-    def __init__(self, p, q, alpha, beta):
+    def __init__(self, p, q, alpha):
         """ Constructor."""
 
         self.p_ = p # Number of autoregressive coefficients (on past latencies).
         self.q_ = q # Number of moving average coefficients (on past controls).
-        self.alpha_ = alpha # Learning rate for AR coefficients.
-        self.beta_ = beta # Learning rate for MA coefficients.
+        self.alpha_ = alpha # Learning rate for model coefficients.
 
         # Initialize coefficients with all zeros.
         self.a_ = np.ones(p)
@@ -84,7 +83,7 @@ class AdaptiveFilter:
         # Gradient descent on 'a'.
         if total_norm > 1e-16:
             for ii, r in enumerate(self.r_):
-                self.b_[ii] -= self.beta_ * error * r / total_norm
+                self.b_[ii] -= self.alpha_ * error * r / total_norm
 
         # Add new measurement to the history.
         self.l_.appendleft(l_meas)
