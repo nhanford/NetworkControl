@@ -177,7 +177,7 @@ def main():
                     #else:
                     #    samplertt = 1
                 #Code for calling controller
-                rate, lHat = controller.Process(rtt, rate) 
+                rate, lHat = controller.Process(rtt) 
                 if on:
                     setfq(rate)
                 writer.writerow([rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
