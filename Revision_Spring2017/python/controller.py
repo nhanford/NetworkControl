@@ -50,6 +50,7 @@ class Controller:
         self.l_hat_ = self.model_.Predict(0.0, True)
 
         # Normalize coefficients before solving for optimal control.
+        print self.mu_variance_
         psi = self.psi_ / self.mu_variance_
         xi = self.xi_ / self.mu_control_
         b0 = self.model_.b_[0]
