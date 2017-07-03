@@ -149,7 +149,7 @@ def main():
     oldBytes = getBytes()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['ertt', 'samplertt', 'controlRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
+        writer.writerow(['ertt', 'lHat', 'samplertt', 'controlRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
         for i in range(20000):
             time.sleep(.01)
             #Get throughput every 100ms
@@ -177,10 +177,10 @@ def main():
                     #else:
                     #    samplertt = 1
                 #Code for calling controller
-                rate = controller.Process(rtt, rate) #
+                rate, lHat = controller.Process(rtt, rate) 
                 if on:
                     setfq(rate)
-                writer.writerow([rtt, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
+                writer.writerow([rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
             oldrtt = rtt
