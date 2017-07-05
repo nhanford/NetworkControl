@@ -31,6 +31,6 @@ do
     done
 done
 
-
+sudo chown nate *.csv
 mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/
