@@ -24,6 +24,7 @@ import tempfile
 import shutil
 import socket
 from controller import Controller
+from datetime import datetime
 
 # Adaptive filter parameters.
 ALPHA = 0.5
@@ -147,10 +148,12 @@ def main():
     subprocess.Popen(['bwctl', '-c', dest, '-T', 'iperf3', '-i.1', '-w150m', '-t60', '--parsable', '-p'])
     #Initialize bytes for throughput count
     oldBytes = getBytes()
+    #Initialize timedelta
+    startTime = datetime.now()
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as output:
         writer = csv.writer(output)
-        writer.writerow(['ertt', 'lHat', 'samplertt', 'controlRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
-        for i in range(20000):
+        writer.writerow(['end','ertt', 'lHat', 'samplertt', 'controlRate', 'throughput', 'retransmits', 'cwnd', 'mss', 'txPort', 'rxPort'])
+        for i in range(30000):
             time.sleep(.01)
             #Get throughput every 100ms
             if i%10 == 0:
@@ -163,8 +166,10 @@ def main():
             if rtt > 0:
                 flowFound = True
                 #Inversion of RTT to sample RTT
+                #First time seeing this flow
                 if oldrtt == -1:
                     oldrtt = rtt
+                    start = datetime.now()
                 #elif nominalrtt<0 or rtt<nominalrtt: #stopped finding the lowest RTT
                 #    nominalrtt = rtt
                 delta = rtt-oldrtt
@@ -180,6 +185,7 @@ def main():
                 rate, lHat = controller.Process(rtt) 
                 if on:
                     setfq(rate)
+                
                 writer.writerow([rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
