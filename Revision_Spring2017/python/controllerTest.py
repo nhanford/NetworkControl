@@ -169,7 +169,7 @@ def main():
                 #First time seeing this flow
                 if oldrtt == -1:
                     oldrtt = rtt
-                    start = datetime.now()
+                    startTime = datetime.now()
                 #elif nominalrtt<0 or rtt<nominalrtt: #stopped finding the lowest RTT
                 #    nominalrtt = rtt
                 delta = rtt-oldrtt
@@ -185,8 +185,7 @@ def main():
                 rate, lHat = controller.Process(rtt) 
                 if on:
                     setfq(rate)
-                end = start - datetime.now()
-                start = end
+                end = startTime - datetime.now()
                 writer.writerow([end, rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
