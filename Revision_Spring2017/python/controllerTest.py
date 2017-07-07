@@ -185,8 +185,9 @@ def main():
                 rate, lHat = controller.Process(rtt) 
                 if on:
                     setfq(rate)
-                
-                writer.writerow([rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
+                end = start - datetime.now()
+                start = end
+                writer.writerow([end, rtt, lHat, samplertt, rate, tput, retrans, cwnd, mss, ports[0], ports[1]])
             elif flowFound:
                 break
             oldrtt = rtt
