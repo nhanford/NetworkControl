@@ -33,6 +33,6 @@ do
     done
 done
 sudo chown nate *.csv
-chmod +r *.csv 
+./snsTest.py
 mkdir ~/`date +%F-%H-%M`
 mv *.csv ~/`date +%F-%H-%M`/

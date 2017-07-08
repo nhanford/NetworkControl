@@ -30,7 +30,7 @@ do
         sudo rm *.bw
     done
 done
-
+./snsTest.py
 sudo chown nate *.csv
 mkdir ~/`date +%F-%H-%M`
-mv *.csv ~/`date +%F-%H-%M`/
+mv *.csv *.pdf ~/`date +%F-%H-%M`/
