@@ -35,4 +35,4 @@ done
 sudo chown nate *.csv
 ./snsTest.py
 mkdir ~/`date +%F-%H-%M`
-mv *.csv ~/`date +%F-%H-%M`/
+mv *.csv *.pdf ~/`date +%F-%H-%M`/
