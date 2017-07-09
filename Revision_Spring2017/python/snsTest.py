@@ -16,8 +16,8 @@ plt.style.use('seaborn-paper')
 
 for path in glob.glob('*on-controlOutput.csv'):
     try:
-        df = pd.read_csv(path).head(3000)
-        df['time'] = df.index
+        df = pd.read_csv(path).head(3000).tail(2980)
+        df['time'] = df.index * 20
         ax = df.plot(x='time',y='ertt')
         ax2 = df.plot(x='time', y='controlRate', secondary_y=True, ax=ax)
         ax.set_ylim(ymin=0)
@@ -37,8 +37,8 @@ for path in glob.glob('*on-controlOutput.csv'):
 
 for path in glob.glob('*on-controlOutput.csv'):
     try:
-        df = pd.read_csv(path).head(3000)
-        df['time'] = df.index
+        df = pd.read_csv(path).head(3000).tail(2980)
+        df['time'] = df.index * 20
         ax = df.plot(x='time',y='ertt')
         ax.set_xlabel('time (milliseconds)')
         ax.set_ylabel('latency (milliseconds)', color='k')
@@ -57,10 +57,9 @@ for path in glob.glob('*on-controlOutput.csv'):
 
 for path in glob.glob('*off-controlOutput.csv'):
     try:
-        df = pd.read_csv(path).head(3000)
-        df['time'] = df.index
+        df = pd.read_csv(path).head(3000).tail(2980)
+        df['time'] = df.index * 20
         ax = df.plot(x='time',y='ertt')
-        ax.set_xtick
         ax.set_xlabel('time (milliseconds)')
         ax.set_ylabel('latency (milliseconds)', color='k')
         ax2 = df.plot(x='time', y='lHat', secondary_y=False, ax=ax)

@@ -163,7 +163,7 @@ def main():
             ssout = pollss()
             ips, ports, rtt, wscaleavg, cwnd, retrans, mss = findconn(ssout,dest)
             #When the flow is actually occurring
-            if rtt > 0:
+            if rtt != -1:
                 flowFound = True
                 #Inversion of RTT to sample RTT
                 #First time seeing this flow
