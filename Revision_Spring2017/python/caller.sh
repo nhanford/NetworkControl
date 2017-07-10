@@ -14,7 +14,7 @@ sudo sysctl -w net.ipv4.tcp_congestion_control=htcp
 
 sudo tc qdisc del dev eth4 root
 
-for i in lbl sacr
+for i in sacr
 do
     for j in {1..3}
     do
