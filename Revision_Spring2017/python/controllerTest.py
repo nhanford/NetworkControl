@@ -103,7 +103,7 @@ def findconn(connections,dest):
     ip = socket.gethostbyname(dest)
     for connection in connections:
         ips, ports, rtt, wscaleavg, cwnd, retrans, mss = parseconnection(connection)
-        if ips[0] == '10.2.2.2' and ips[1] == ip and 4999 < ports[1] < 6000 and cwnd > 10:
+        if ips[0] == '10.40.1.2' and ips[1] == ip and 4999 < ports[1] < 6000 and cwnd > 10:
             return ips, ports, rtt, wscaleavg, cwnd, retrans, mss
     return -1, -1, -1, -1, -1, -1, -1
 
