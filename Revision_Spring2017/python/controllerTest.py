@@ -198,7 +198,7 @@ def main():
     shutil.copy2(output.name, 'XI-'+str(XI)+'-PSI-'+str(PSI)+'-'+dest+'-'+add+'-'+controlStat+'-controlOutput.csv')
     os.unlink(output.name)
     #Wait 10 seconds for bwctl output
-    time.sleep(30)
+    time.sleep(45)
     #Convert the bwctl json file to csv
     for basename in os.listdir('.'):
         if basename.endswith('.bw'):
