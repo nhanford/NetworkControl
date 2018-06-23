@@ -10,6 +10,8 @@
  *          Taran Lynn
  */
 
+#include <linux/version.h>
+
 #include "sch_hi.h"
 
 static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
@@ -35,8 +37,13 @@ static struct sk_buff* hi_peek(struct Qdisc *sch) {
     return qdisc_peek_head(sch);
 }
 
+// FIXME: This is a quick fix to make it compile on 4.15 and 4.17.
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
+static int hi_init(struct Qdisc *sch, struct nlattr *opt)
+#else
 static int hi_init(struct Qdisc *sch, struct nlattr *opt,
         struct netlink_ext_ack *extack)
+#endif
 {
     bool bypass;
 
