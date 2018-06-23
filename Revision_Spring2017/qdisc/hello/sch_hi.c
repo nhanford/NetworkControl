@@ -17,7 +17,10 @@
 static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         struct sk_buff **to_free)
 {
-    hi_log("hi_dequeue\n");
+    hi_log("hi_enqueue\n");
+
+    if(skb != NULL)
+        hi_log("enq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
 
     if (likely(sch->q.qlen < sch->limit))
         return qdisc_enqueue_tail(skb, sch);
@@ -26,9 +29,18 @@ static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 }
 
 static struct sk_buff* hi_dequeue(struct Qdisc *sch) {
+    struct sk_buff *skb;
+
     hi_log("hi_dequeue\n");
 
-    return qdisc_dequeue_head(sch);
+    // skb corresponds to whatever packet is ready, NULL is none are.
+    skb = qdisc_dequeue_head(sch);
+
+    if(skb != NULL)
+        hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
+
+    // Returns a packet to send out, NULL if we don't send out any.
+    return skb;
 }
 
 static struct sk_buff* hi_peek(struct Qdisc *sch) {
@@ -45,8 +57,6 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
         struct netlink_ext_ack *extack)
 #endif
 {
-    bool bypass;
-
     hi_log("Initialized\n");
 
     if (opt == NULL) {
@@ -61,13 +71,6 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
 
         sch->limit = ctl->limit;
     }
-
-    bypass = sch->limit >= 1;
-
-    if (bypass)
-        sch->flags |= TCQ_F_CAN_BYPASS;
-    else
-        sch->flags &= ~TCQ_F_CAN_BYPASS;
 
     return 0;
 }
