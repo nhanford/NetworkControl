@@ -23,4 +23,5 @@ tc qdisc add dev enp3s0 root hi
 ```
 
 `make stop` similarly removes the qdisc. If enp3s0 is the wrong device, then set
-QDEV to the appropriate on (`make start QDEV=<dev>`).
+QDEV to the appropriate on (`make start QDEV=<dev>`). Additionally, QARGS can
+be set to send arguments to the QDisc.

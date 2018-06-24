@@ -1,19 +1,16 @@
 
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/errno.h>
-#include <linux/skbuff.h>
-#include <net/pkt_sched.h>
-
-
 #ifndef SCH_HI_H
 #define SCH_HI_H
 
 #define hi_log(args, ...) printk(KERN_INFO "qdisk hi: " args, ##__VA_ARGS__)
 
-extern struct Qdisc_ops hi_qdisc_ops;
+enum {
+    TCA_HI_UNSPEC,
+    TCA_HI_LIMIT,
+    __TCA_HI_MAX
+};
+
+#define TCA_HI_MAX (__TCA_HI_MAX - 1)
 
 #endif /* end of include guard: SCH_HI_H */
 
