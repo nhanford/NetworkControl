@@ -7,7 +7,7 @@
  *		2 of the License, or (at your option) any later version.
  *
  * Authors:	Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>
- *          Taran Lynn
+ *          Taran Lynn <taranlynn0@gmail.com>
  */
 
 #include <linux/version.h>
@@ -96,6 +96,11 @@ static void hi_reset(struct Qdisc *sch)
     qdisc_reset_queue(sch);
 }
 
+static void hi_destroy(struct Qdisc *sch)
+{
+    hi_log("hi_destroy\n");
+}
+
 struct Qdisc_ops hi_qdisc_ops __read_mostly = {
     .id		=	"hi",
     .priv_size	=	0,
@@ -104,6 +109,7 @@ struct Qdisc_ops hi_qdisc_ops __read_mostly = {
     .peek		=	hi_peek,
     .init		=	hi_init,
     .reset		=	hi_reset,
+    .destroy  = hi_destroy,
     .change		=	hi_init,
     .dump		=	hi_dump,
     .owner		=	THIS_MODULE,
