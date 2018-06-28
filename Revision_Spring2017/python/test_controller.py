@@ -17,7 +17,6 @@ NUM_DATA_POINTS = 200
 
 # Adaptive filter parameters.
 ALPHA = 0.5
-BETA = 0.5
 P = 5
 Q = 1
 
@@ -37,7 +36,7 @@ NOISE_SD = 0.0
 world = LatencyGenerator(L_MAX, L_SLOPE, L_CUT, R_COEFF, NOISE_SD)
 
 # Create a controller.
-controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA, BETA)
+controller = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
 
 # Run.
 recorded_index = np.arange(NUM_DATA_POINTS)
@@ -49,9 +48,8 @@ last_control = 0.0
 for ii in range(NUM_DATA_POINTS):
     predicted_latency[ii] = controller.model_.Predict(last_control, True)
     recorded_latency[ii] = world.Generate(last_control)
-    recorded_mu[ii] = controller.mu_
 
-    last_control = max(0.0, controller.Process(recorded_latency[ii]))
+    last_control = max(0.0, controller.Process(recorded_latency[ii])[0])
     recorded_control[ii] = last_control
 
 
@@ -59,9 +57,8 @@ for ii in range(NUM_DATA_POINTS):
 plt.figure()
 plt.plot(recorded_index, recorded_latency, 'r--',
          recorded_index, predicted_latency, 'g^',
-         recorded_index, recorded_mu, 'r^',
          recorded_index, recorded_control, 'bs')
-plt.legend(['Actual Latency', 'Predicted Latency', 'Nominal Latency', 'Control'])
+plt.legend(['Actual Latency', 'Predicted Latency', 'Control'])
 plt.title('Simulation of Latency and Control')
 plt.xlabel('Time step')
 plt.ylabel('Arbitrary units')
