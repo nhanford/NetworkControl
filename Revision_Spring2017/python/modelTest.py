@@ -111,6 +111,26 @@ class Switch:
         else:
             return self.sndRes_.generate(rate)
 
+class VarRatePenalizer:
+    """
+    Penalizes variations in rate. The more rapid the greater the penalty.
+    """
+
+    def __init__(self, response, penalty):
+        self.response_ = response
+        self.penalty_ = penalty
+
+        self.lastRate_ = None
+
+    def generate(self, rate):
+        if self.lastRate_ is None:
+            self.lastRate_ = rate
+            return self.response_.generate(rate)
+        else:
+            addedLat = self.penalty_ * abs(self.lastRate_ - rate)
+            self.lastRate_ = rate
+            return self.response_.generate(rate) + addedLat
+
 class LatencyGenerator:
     """
     Latency generator implemented by David Fridovich.
@@ -147,6 +167,10 @@ if __name__ == "__main__":
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
     tester.test(Offset(10, 5, 2), "Offset Latency")
+
+    # Model for when consistency is desired.
+    tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
+            "Offset Latency with Penalized Rate Changes")
 
     # Here we switch from offset to constant halfway through. The idea is that
     # this could mimic a probing mode as suggested by Nate.
