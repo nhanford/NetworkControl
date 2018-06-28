@@ -13,6 +13,7 @@ from controller import Controller
 
 import math
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 # Adaptive filter parameters.
@@ -28,37 +29,43 @@ GAMMA = 0.5
 NUM_DATA_POINTS = 200
 
 
-def test(response):
-    """
-    Tests the controller out on a given response pattern.
+class Tester:
+    def __init__(self):
+        self.plotCount_ = 0
 
-    @arg response A model that takes a rate and determine the connection RTT.
-    This model should have a method of the form generate(rate).
-    """
-    rateler = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
+    def test(self, response, desc):
+        """
+        Tests the controller out on a given response pattern.
 
-    recorded_index = np.arange(NUM_DATA_POINTS)
-    recorded_latency = np.zeros(NUM_DATA_POINTS)
-    predicted_latency = np.zeros(NUM_DATA_POINTS)
-    recorded_rate = np.zeros(NUM_DATA_POINTS)
-    last_rate = 0.0
+        @arg response A model that takes a rate and determine the connection RTT.
+        This model should have a method of the form generate(rate).
+        """
+        rateler = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
 
-    for i in range(1, NUM_DATA_POINTS):
-        recorded_latency[i] = response.generate(recorded_rate[i - 1])
+        recorded_index = np.arange(NUM_DATA_POINTS)
+        recorded_latency = np.zeros(NUM_DATA_POINTS)
+        predicted_latency = np.zeros(NUM_DATA_POINTS)
+        recorded_rate = np.zeros(NUM_DATA_POINTS)
+        last_rate = 0.0
 
-        (last_rate, predicted_latency[i]) = rateler.Process(recorded_latency[i])
-        recorded_rate[i] = last_rate
+        for i in range(1, NUM_DATA_POINTS):
+            recorded_latency[i] = response.generate(recorded_rate[i - 1])
 
-    plt.figure()
-    plt.plot(recorded_index, recorded_latency, 'r--',
-             recorded_index, predicted_latency, 'g^',
-             recorded_index, recorded_rate, 'yo')
-    plt.legend(['Actual Latency', 'Predicted Latency', 'Rate'])
-    plt.title('Simulation of Latency and Control')
-    plt.xlabel('Time step')
-    plt.ylabel('Arbitrary units')
-    plt.show()
+            (last_rate, predicted_latency[i]) = rateler.Process(recorded_latency[i])
+            recorded_rate[i] = last_rate
 
+        plt.figure(self.plotCount_)
+        plt.plot(recorded_index, recorded_latency, 'r--',
+                 recorded_index, predicted_latency, 'g^',
+                 recorded_index, recorded_rate, 'yo')
+        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate'])
+        plt.title('Simulation of Latency and Control: ' + desc)
+        plt.xlabel('Time step')
+        plt.ylabel('Arbitrary units')
+        self.plotCount_ += 1
+
+    def results(self):
+        plt.show()
 
 class Constant:
     """
@@ -85,18 +92,21 @@ class Offset:
     def generate(self, rate):
         return self.bestLat_ + self.rateSens_ * abs(self.optRate_ - rate)
 
-class Split:
+class Switch:
     """
-    Splits between two responses at a certain rate.
+    Switchs between two responses at a certain time.
     """
 
-    def __init__(self, firstResponse, secondResponse, cutoffRate):
+    def __init__(self, firstResponse, secondResponse, switchTime):
         self.fstRes_ = firstResponse
         self.sndRes_ = secondResponse
-        self.cutoffRate_ = cutoffRate
+        self.swTime_ = switchTime
+
+        self.time_ = 0
 
     def generate(self, rate):
-        if rate < self.cutoffRate_:
+        if self.time_ < self.swTime_:
+            self.time_ += 1
             return self.fstRes_.generate(rate)
         else:
             return self.sndRes_.generate(rate)
@@ -128,6 +138,22 @@ class LatencyGenerator:
 
 
 if __name__ == "__main__":
-    test(Constant(5))
-    #test(Offset(10, 5, 2))
-    #test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0))
+    tester = Tester()
+
+    # Constant latency feedback. Could represent a high performance network that
+    # works as fast as possible no matter the rate.
+    tester.test(Constant(5), "Constant Latency")
+
+    # Here we model a network whose latency is best at a certain rate, with no
+    # other considerations.
+    tester.test(Offset(10, 5, 2), "Offset Latency")
+
+    # Here we switch from offset to constant halfway through. The idea is that
+    # this could mimic a probing mode as suggested by Nate.
+    tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
+            "Switch Offset to Constant Latency")
+
+    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
+            "Fridovich's Original Model")
+
+    tester.results()
