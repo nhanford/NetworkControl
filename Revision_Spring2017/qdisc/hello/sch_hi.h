@@ -7,6 +7,7 @@
 enum {
     TCA_HI_UNSPEC,
     TCA_HI_LIMIT,
+    TCA_HI_MAXRATE,  // Rate in Hertz.
     __TCA_HI_MAX
 };
 

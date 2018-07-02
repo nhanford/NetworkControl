@@ -20,6 +20,15 @@
 
 #include "sch_hi.h"
 
+struct hi_sched_data {
+    // The maximum rate to send packets at (in Hertz).
+    u64 max_rate;
+
+    // The timestamp when the last packet was sent.
+    u64 last_time;
+};
+
+
 static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         struct sk_buff **to_free)
 {
@@ -35,12 +44,24 @@ static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 }
 
 static struct sk_buff* hi_dequeue(struct Qdisc *sch) {
-    struct sk_buff *skb;
+    struct hi_sched_data *q = qdisc_priv(sch);
+    struct sk_buff *skb = NULL;
+    u64 now = ktime_get_ns();
+    u64 delay;
+
+    if(q->max_rate == 0)
+        delay = 0;
+    else
+        // Convert Hertz to period in nanoseconds.
+        delay = 1000000000/q->max_rate;
 
     hi_log("hi_dequeue\n");
 
-    // skb corresponds to whatever packet is ready, NULL is none are.
-    skb = qdisc_dequeue_head(sch);
+    if(now - q->last_time >= delay) {
+        // skb corresponds to whatever packet is ready, NULL is none are.
+        skb = qdisc_dequeue_head(sch);
+        q->last_time = now;
+    }
 
     if(skb != NULL)
         hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
@@ -58,6 +79,7 @@ static struct sk_buff* hi_peek(struct Qdisc *sch) {
 
 static const struct nla_policy hi_policy[TCA_HI_MAX + 1] = {
     [TCA_HI_LIMIT]			= { .type = NLA_U32 },
+    [TCA_HI_MAXRATE]		= { .type = NLA_U32 },
 };
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
@@ -67,6 +89,7 @@ static int hi_change(struct Qdisc *sch, struct nlattr *opt,
         struct netlink_ext_ack *extack)
 #endif
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
     struct nlattr *tb[TCA_HI_MAX + 1];
     int err;
 
@@ -83,7 +106,13 @@ static int hi_change(struct Qdisc *sch, struct nlattr *opt,
         sch->limit = nla_get_u32(tb[TCA_HI_LIMIT]);
         hi_log("Set limit to %d\n", sch->limit);
     } else {
-        hi_log("No set limit %p\n", tb[TCA_HI_LIMIT]);
+        hi_log("No set limit %p stays at %d\n", tb[TCA_HI_LIMIT], sch->limit);
+    }
+
+    if (tb[TCA_HI_MAXRATE]) {
+        q->max_rate = nla_get_u32(tb[TCA_HI_MAXRATE]);
+
+        hi_log("Set max_rate to %lld\n", q->max_rate);
     }
 
     return err;
@@ -97,13 +126,16 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
         struct netlink_ext_ack *extack)
 #endif
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
+
     hi_log("Initialized\n");
 
-    if (opt == NULL) {
-        u32 limit = qdisc_dev(sch)->tx_queue_len;
+    q->max_rate = 0;
+    q->last_time = ktime_get_ns();
 
-        sch->limit = limit;
-    } else {
+    sch->limit = qdisc_dev(sch)->tx_queue_len;
+
+    if(opt) {
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
         hi_change(sch, opt);
 #else
@@ -116,13 +148,15 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
 
 static int hi_dump(struct Qdisc *sch, struct sk_buff *skb)
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
     struct nlattr *opts;
 
     opts = nla_nest_start(skb, TCA_OPTIONS);
     if (opts == NULL)
         goto nla_put_failure;
 
-    if (nla_put_u32(skb, TCA_HI_LIMIT, sch->limit))
+    if (nla_put_u32(skb, TCA_HI_LIMIT, sch->limit) ||
+        nla_put_u32(skb, TCA_HI_MAXRATE, q->max_rate))
         goto nla_put_failure;
 
     return nla_nest_end(skb, opts);
