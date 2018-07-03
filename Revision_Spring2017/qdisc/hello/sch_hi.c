@@ -54,23 +54,30 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
     // skb corresponds to whatever packet is ready, NULL is none are.
     skb = qdisc_peek_head(sch);
 
-    if(skb != NULL && q->max_rate != 0) {
-        u64 min_delay = NSEC_PER_SEC * skb->len / (8 * q->max_rate);
-        hi_log("min_delay = %lld, delay = %lld\n", min_delay, now - q->last_time);
+    if(q->max_rate == 0) {
+        goto next_packet;
+    } else if(skb != NULL) {
+        u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
+        hi_log("min_delay = %lld, delay = %lld, %lld%%\n", 
+                min_delay, now - q->last_time, 100*skb->len/q->max_rate);
 
         if(now - q->last_time > min_delay) {
             // Only send out a packet if doing so doesn't go over the maximum
             // bit rate.
-            skb = qdisc_dequeue_head(sch);
-            q->last_time = now;
+            goto next_packet;
         } else {
             skb = NULL;
+            goto exit_dequeue;
         }
     }
 
+next_packet:
+    skb = qdisc_dequeue_head(sch);
+    q->last_time = now;
+
     if(skb != NULL)
         hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
-
+exit_dequeue:
     // Returns a packet to send out, NULL if we don't send out any.
     return skb;
 }
