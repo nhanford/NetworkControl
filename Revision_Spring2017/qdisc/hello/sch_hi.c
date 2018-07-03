@@ -54,7 +54,7 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
     // skb corresponds to whatever packet is ready, NULL is none are.
     skb = qdisc_peek_head(sch);
 
-    if(skb != NULL) {
+    if(skb != NULL && q->max_rate != 0) {
         u64 min_delay = NSEC_PER_SEC * skb->len / (8 * q->max_rate);
         hi_log("min_delay = %lld, delay = %lld\n", min_delay, now - q->last_time);
 
