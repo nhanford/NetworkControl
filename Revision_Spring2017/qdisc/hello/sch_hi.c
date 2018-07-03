@@ -24,9 +24,6 @@ struct hi_sched_data {
     // The maximum rate to send in bytes per second.
     u64 max_rate;
 
-    // The number of bits we are ready to send.
-    int ready_bits;
-
     // The timestamp when the last packet was sent.
     u64 last_time;
 };
@@ -46,42 +43,33 @@ static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
     return qdisc_drop(skb, sch, to_free);
 }
 
-static struct sk_buff* hi_dequeue(struct Qdisc *sch) {
+static struct sk_buff* hi_dequeue(struct Qdisc *sch)
+{
     struct hi_sched_data *q = qdisc_priv(sch);
     struct sk_buff *skb = NULL;
     u64 now = ktime_get_ns();
-    int new_bits = (now - q->last_time) * (8 * q->max_rate) / NSEC_PER_SEC;
 
     hi_log("hi_dequeue\n");
-
-    hi_log("q->ready_bits = %d\n", q->ready_bits);
 
     // skb corresponds to whatever packet is ready, NULL is none are.
     skb = qdisc_peek_head(sch);
 
     if(skb != NULL) {
-        q->ready_bits += new_bits;
-    } else {
-        // We are no longer sending a stream of packets, start decreasing
-        // ready_bits. Can think of this as bits that would have been sent.
-        q->ready_bits -= new_bits;
+        u64 min_delay = NSEC_PER_SEC * skb->len / (8 * q->max_rate);
+        hi_log("min_delay = %lld, delay = %lld\n", min_delay, now - q->last_time);
 
-        if(q->ready_bits < 0)
-            q->ready_bits = 0;
-    }
-
-    if(skb != NULL && skb->len <= q->ready_bits) {
-        // Only send out a packet if doing so doesn't go over the maximum bit rate.
-        skb = qdisc_dequeue_head(sch);
-        q->ready_bits -= skb->len;
-    } else {
-        skb = NULL;
+        if(now - q->last_time > min_delay) {
+            // Only send out a packet if doing so doesn't go over the maximum
+            // bit rate.
+            skb = qdisc_dequeue_head(sch);
+            q->last_time = now;
+        } else {
+            skb = NULL;
+        }
     }
 
     if(skb != NULL)
         hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
-
-    q->last_time = now;
 
     // Returns a packet to send out, NULL if we don't send out any.
     return skb;
@@ -148,7 +136,6 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
     hi_log("Initialized\n");
 
     q->max_rate = ~0U;
-    q->ready_bits = 0;
     q->last_time = ktime_get_ns();
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
