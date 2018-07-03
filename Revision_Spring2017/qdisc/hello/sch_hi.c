@@ -58,7 +58,7 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
         goto next_packet;
     } else if(skb != NULL) {
         u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
-        hi_log("min_delay = %lld, delay = %lld, %lld%%\n", 
+        hi_log("min_delay = %lld, delay = %lld, %lld%%\n",
                 min_delay, now - q->last_time, 100*skb->len/q->max_rate);
 
         if(now - q->last_time > min_delay) {
@@ -73,10 +73,11 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
 
 next_packet:
     skb = qdisc_dequeue_head(sch);
-    q->last_time = now;
 
-    if(skb != NULL)
+    if(skb != NULL) {
+        q->last_time = now;
         hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
+    }
 exit_dequeue:
     // Returns a packet to send out, NULL if we don't send out any.
     return skb;
