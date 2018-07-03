@@ -53,7 +53,7 @@ static int hi_parse_opt(struct qdisc_util *qu, int argc, char **argv,
         } else if (strcmp(*argv, "maxrate") == 0) {
             NEXT_ARG();
 
-            if (get_unsigned(&max_rate, *argv, 0)) {
+            if (get_rate(&max_rate, *argv)) {
                 fprintf(stderr, "Illegal \"maxrate\"\n");
                 return -1;
             }
@@ -102,7 +102,9 @@ static int hi_print_opt(struct qdisc_util *qu, FILE *f, struct rtattr *opt)
     if (tb[TCA_HI_MAXRATE] &&
             RTA_PAYLOAD(tb[TCA_HI_MAXRATE]) >= sizeof(__u32)) {
         max_rate = rta_getattr_u32(tb[TCA_HI_MAXRATE]);
-        fprintf(f, "maxrate %uHz ", max_rate);
+
+        if(max_rate != ~0U)
+          fprintf(f, "maxrate %s ", sprint_rate(max_rate, b1));
     }
 
     return 0;
