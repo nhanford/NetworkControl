@@ -53,7 +53,12 @@ static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
     hi_log("hi_enqueue\n");
 
     if(skb != NULL) {
-        u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
+        u64 min_delay;
+
+        if(q->max_rate == 0)
+            min_delay = 0;
+        else
+            min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
 
         // Take the max here to ensure that we don't go past the max rate on a
         // burst.
@@ -82,40 +87,36 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
     // skb corresponds to whatever packet is ready, NULL if none are.
     skb = qdisc_peek_head(sch);
 
-    if(q->max_rate == 0) {
-        goto next_packet;
-    } else {
-        while(skb != NULL) {
-            u64 tts = hi_skb_cb(skb)->time_to_send;
-            s64 over = tts - now;
+    while(skb != NULL) {
+        u64 tts = hi_skb_cb(skb)->time_to_send;
+        s64 over = tts - now;
 
-            // For diagnostics, ideally these values should be small.
-            if(over > 0)
-                hi_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
-            else {
-                over = -over;
-                hi_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
-            }
-
-            // Only send out a packet if doing so doesn't go over the maximum
-            // bit rate.
-            if(hi_skb_cb(skb)->time_to_send <= now)
-                goto next_packet;
-            else {
-                // Next send time should be for the closest packet.
-                if(next_tts > 0)
-                    next_tts = min_t(u64, next_tts, tts);
-                else
-                    next_tts = tts;
-
-                skb = skb->next;
-            }
+        // For diagnostics, ideally these values should be small.
+        if(over > 0)
+            hi_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
+        else {
+            over = -over;
+            hi_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
         }
 
-        // No packets are ready to be sent, they need to wait.
-        skb = NULL;
-        goto exit_dequeue;
+        // Only send out a packet if doing so doesn't go over the maximum
+        // bit rate.
+        if(hi_skb_cb(skb)->time_to_send <= now)
+            goto next_packet;
+        else {
+            // Next send time should be for the closest packet.
+            if(next_tts > 0)
+                next_tts = min_t(u64, next_tts, tts);
+            else
+                next_tts = tts;
+
+            skb = skb->next;
+        }
     }
+
+    // No packets are ready to be sent, they need to wait.
+    skb = NULL;
+    goto exit_dequeue;
 
 next_packet:
     skb = qdisc_dequeue_head(sch);
@@ -125,7 +126,7 @@ next_packet:
                 skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
 exit_dequeue:
-    hi_log("next_tts = %lld\n", next_tts);
+    hi_log("next_tts = %lld.%lld\n", next_tts/NSEC_PER_SEC, next_tts%NSEC_PER_SEC);
     if(next_tts > 0)
         qdisc_watchdog_schedule_ns(&q->watchdog, next_tts);
     else
