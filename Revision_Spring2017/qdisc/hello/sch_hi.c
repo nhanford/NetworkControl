@@ -24,6 +24,9 @@ struct hi_sched_data {
     // The maximum rate to send in bytes per second.
     u64 max_rate;
 
+    // The time we sent, or will send, the last packet at.
+    u64 last_time_to_send;
+
     // Watchdog to set a timeout.
     struct qdisc_watchdog watchdog;
 };
@@ -51,10 +54,14 @@ static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 
     if(skb != NULL) {
         u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
-        hi_skb_cb(skb)->time_to_send = now + min_delay;
+
+        // Take the max here to ensure that we don't go past the max rate on a
+        // burst.
+        q->last_time_to_send = max_t(u64, now, q->last_time_to_send) + min_delay;
+        hi_skb_cb(skb)->time_to_send = q->last_time_to_send;
 
         hi_log("enq, skb->len = %d, min_delay = %lld.%llds\n",
-                skb->len, min_delay/NSEC_PER_SEC, nsecs%NSEC_PER_SEC);
+                skb->len, min_delay/NSEC_PER_SEC, min_delay%NSEC_PER_SEC);
     }
 
     if (likely(sch->q.qlen < sch->limit))
@@ -82,6 +89,7 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
             u64 tts = hi_skb_cb(skb)->time_to_send;
             s64 over = tts - now;
 
+            // For diagnostics, ideally these values should be small.
             if(over > 0)
                 hi_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
             else {
@@ -114,7 +122,7 @@ next_packet:
 
     if(skb != NULL) {
         hi_log("deq, skb->len = %d, cb->pkt_len = %d\n",
-            skb->len, qdisc_skb_cb(skb)->pkt_len);
+                skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
 exit_dequeue:
     hi_log("next_tts = %lld\n", next_tts);
@@ -188,6 +196,7 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
     hi_log("Initialized\n");
 
     q->max_rate = ~0U;
+    q->last_time_to_send = 0;
     qdisc_watchdog_init(&q->watchdog, sch);
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
