@@ -24,18 +24,38 @@ struct hi_sched_data {
     // The maximum rate to send in bytes per second.
     u64 max_rate;
 
-    // The timestamp when the last packet was sent.
-    u64 last_time;
+    // Watchdog to set a timeout.
+    struct qdisc_watchdog watchdog;
 };
+
+
+struct hi_skb_cb {
+    // When should this packet be sent?
+    u64 time_to_send;
+};
+
+static inline struct hi_skb_cb *hi_skb_cb(struct sk_buff *skb)
+{
+    qdisc_cb_private_validate(skb, sizeof(struct hi_skb_cb));
+    return (struct hi_skb_cb *)qdisc_skb_cb(skb)->data;
+}
 
 
 static int hi_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         struct sk_buff **to_free)
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
+    u64 now = ktime_get_ns();
+
     hi_log("hi_enqueue\n");
 
-    if(skb != NULL)
-        hi_log("enq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
+    if(skb != NULL) {
+        u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
+        hi_skb_cb(skb)->time_to_send = now + min_delay;
+
+        hi_log("enq, skb->len = %d, min_delay = %lld.%llds\n",
+                skb->len, min_delay/NSEC_PER_SEC, nsecs%NSEC_PER_SEC);
+    }
 
     if (likely(sch->q.qlen < sch->limit))
         return qdisc_enqueue_tail(skb, sch);
@@ -48,37 +68,61 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
     struct hi_sched_data *q = qdisc_priv(sch);
     struct sk_buff *skb = NULL;
     u64 now = ktime_get_ns();
+    u64 next_tts = 0;  // The next time to send a packet.
 
     hi_log("hi_dequeue\n");
 
-    // skb corresponds to whatever packet is ready, NULL is none are.
+    // skb corresponds to whatever packet is ready, NULL if none are.
     skb = qdisc_peek_head(sch);
 
     if(q->max_rate == 0) {
         goto next_packet;
-    } else if(skb != NULL) {
-        u64 min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
-        hi_log("min_delay = %lld, delay = %lld, %lld%%\n",
-                min_delay, now - q->last_time, 100*skb->len/q->max_rate);
+    } else {
+        while(skb != NULL) {
+            u64 tts = hi_skb_cb(skb)->time_to_send;
+            s64 over = tts - now;
 
-        if(now - q->last_time > min_delay) {
+            if(over > 0)
+                hi_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
+            else {
+                over = -over;
+                hi_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
+            }
+
             // Only send out a packet if doing so doesn't go over the maximum
             // bit rate.
-            goto next_packet;
-        } else {
-            skb = NULL;
-            goto exit_dequeue;
+            if(hi_skb_cb(skb)->time_to_send <= now)
+                goto next_packet;
+            else {
+                // Next send time should be for the closest packet.
+                if(next_tts > 0)
+                    next_tts = min_t(u64, next_tts, tts);
+                else
+                    next_tts = tts;
+
+                skb = skb->next;
+            }
         }
+
+        // No packets are ready to be sent, they need to wait.
+        skb = NULL;
+        goto exit_dequeue;
     }
 
 next_packet:
     skb = qdisc_dequeue_head(sch);
 
     if(skb != NULL) {
-        q->last_time = now;
-        hi_log("deq, skb->len = %d, skb->data_len = %d\n", skb->len, skb->data_len);
+        hi_log("deq, skb->len = %d, cb->pkt_len = %d\n",
+            skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
 exit_dequeue:
+    hi_log("next_tts = %lld\n", next_tts);
+    if(next_tts > 0)
+        qdisc_watchdog_schedule_ns(&q->watchdog, next_tts);
+    else
+        qdisc_watchdog_cancel(&q->watchdog);
+
     // Returns a packet to send out, NULL if we don't send out any.
     return skb;
 }
@@ -144,7 +188,7 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
     hi_log("Initialized\n");
 
     q->max_rate = ~0U;
-    q->last_time = ktime_get_ns();
+    qdisc_watchdog_init(&q->watchdog, sch);
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
 
@@ -180,9 +224,12 @@ nla_put_failure:
 
 static void hi_reset(struct Qdisc *sch)
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
+
     hi_log("hi_reset\n");
 
     qdisc_reset_queue(sch);
+    qdisc_watchdog_cancel(&q->watchdog);
 }
 
 static void hi_destroy(struct Qdisc *sch)
