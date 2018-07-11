@@ -27,6 +27,8 @@ struct control {
 inline void set_rate(struct sock * sk, u32 rate) {
     struct tcp_sock *tp = tcp_sk(sk);
 
+    mpc_cc_log("Setting rate to %u\n", rate);
+
     sk->sk_pacing_rate = rate;
     sk->sk_max_pacing_rate = rate;
     tp->snd_cwnd = max_t(u32, 1, rate * tp->srtt_us / USEC_PER_SEC);
@@ -45,10 +47,15 @@ void mpc_cc_init(struct sock *sk)
 void mpc_cc_release(struct sock *sk)
 {
     struct control *ctl = inet_csk_ca(sk);
-    model_release(ctl->md);
-    kfree(ctl->md);
 
     mpc_cc_log("release\n");
+
+    if(ctl->md != NULL) {
+        model_release(ctl->md);
+        kfree(ctl->md);
+    } else {
+        mpc_cc_log("md was NULL in release\n");
+    }
 }
 
 
@@ -83,9 +90,6 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
     struct control *ctl = inet_csk_ca(sk);
     struct tcp_sock *tp = tcp_sk(sk);
 
-    if(ctl->md == NULL)
-        mpc_cc_init(sk);
-
     mpc_cc_log("main: srtt_us = %u, rack->rtt_us = %u, rcv_rtt_est = %u\n"
             "rs->rtt_us = %lu, mdev_us = %u\n"
             "sk_pacing_rate = %u, sk_max_pacing_rate = %u\n",
@@ -95,7 +99,11 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 
     mpc_cc_log("snd_cwnd = %u, sk_pacing_status = %u\n", tp->snd_cwnd, sk->sk_pacing_status);
 
-    //set_rate(sk, control_process(ctl->md, rs->rtt_us));
+    if(ctl->md != NULL) {
+        set_rate(sk, control_process(ctl->md, rs->rtt_us));
+    } else {
+        mpc_cc_log("md was NULL in main\n");
+    }
 }
 
 
