@@ -30,7 +30,6 @@ with open(dataFile) as data:
 for i in range(1, len(rate)):
     if rate[i] == 0:
         rate[i] = rate[i - 1]
-        print(rate[i])
 
 plt.figure(0)
 plt.plot(startTime, rtt, 'r-',
