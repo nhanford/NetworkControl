@@ -52,6 +52,13 @@ u32 control_process(struct model *md, u32 rtt_meas)
     rate_opt = LB_D(LB_M(xi - b0/atl1(md->avg_rtt), LB_D(LB_D(1, atl1(psi)), b0))
         + 2*md->avg_rtt - 2*md->predicted_rtt, 2*b0);
 
+    // Clamp rate
+    // TODO: Make bounds less arbitrary.
+    if(rate_opt < 100<<10)
+        rate_opt = 100<<10;
+    else if(rate_opt > 10<<30)
+        rate_opt = 10<<30;
+
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt += b0 * rate_opt;
 
