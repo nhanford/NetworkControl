@@ -1,5 +1,6 @@
 #!/bin/sh
 
-dest=$1
+file=$1
+dest=$2
 
-bwctl -c $dest -T iperf3 -i.1 -w150m -t60 --parsable -p
+bwctl -c $dest -T iperf3 -i.1 -w150m -t60 --parsable > $file
