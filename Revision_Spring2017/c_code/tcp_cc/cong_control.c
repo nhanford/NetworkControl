@@ -16,7 +16,7 @@
 #include "../mpc/control.h"
 
 #define RATE_GAIN (100 << 10)
-#define PROBING_PERIOD 3
+#define PROBING_PERIOD 40
 #define mpc_cc_log(args, ...) printk(KERN_INFO "mpc_cc: " args, ##__VA_ARGS__)
 
 
