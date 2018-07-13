@@ -16,8 +16,10 @@
 #include <linux/errno.h>
 #include <linux/skbuff.h>
 #include <net/pkt_sched.h>
+#include <net/tcp.h>
 #include <linux/version.h>
 
+#include "../../mpc/control.h"
 #include "sch_hi.h"
 
 struct hi_sched_data {
@@ -29,6 +31,10 @@ struct hi_sched_data {
 
     // Watchdog to set a timeout.
     struct qdisc_watchdog watchdog;
+
+    u32 last_srtt;
+
+    struct model *md;
 };
 
 
@@ -122,6 +128,31 @@ next_packet:
     skb = qdisc_dequeue_head(sch);
 
     if(skb != NULL) {
+        if(skb->sk != NULL && skb->sk->sk_protocol == IPPROTO_TCP) {
+            // NOTE: There is a need to condsider this for different flows.
+            struct tcp_sock *tp = tcp_sk(skb->sk);
+            u32 rtt;
+
+            // srtt' = (1 - a) * srtt + a * rtt
+            // rtt = srtt + (srtt' - srtt)/a
+            // Reading the sources tells us that a = 1/8.
+            // We have to make sure we get a positive rtt, otherwise estimate as
+            // srtt.
+            //
+            // TODO: Don't hardcode alpha.
+            if(q->last_srtt + 8*tp->srtt_us > 8*q->last_srtt)
+                rtt = q->last_srtt + 8*tp->srtt_us - 8*q->last_srtt;
+            else
+                rtt = tp->srtt_us;
+
+            q->last_srtt = tp->srtt_us;
+
+            q->max_rate = control_process(q->md, rtt);
+
+            hi_log("tp->srtt_us = %u, tp->mdev_us = %u, rtt = %u, q->max_rate = %llu\n",
+                    tp->srtt_us, tp->mdev_us, rtt, q->max_rate);
+        }
+
         hi_log("deq, skb->len = %d, cb->pkt_len = %d\n",
                 skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
@@ -200,6 +231,11 @@ static int hi_init(struct Qdisc *sch, struct nlattr *opt,
     q->last_time_to_send = 0;
     qdisc_watchdog_init(&q->watchdog, sch);
 
+    q->last_srtt = 0;
+
+    q->md = kmalloc(sizeof(struct model), GFP_KERNEL);
+    model_init(q->md, 100, 10, 50, 50, 5, 1);
+
     sch->limit = qdisc_dev(sch)->tx_queue_len;
 
     if(opt) {
@@ -244,7 +280,11 @@ static void hi_reset(struct Qdisc *sch)
 
 static void hi_destroy(struct Qdisc *sch)
 {
+    struct hi_sched_data *q = qdisc_priv(sch);
     hi_log("hi_destroy\n");
+
+    model_release(q->md);
+    kfree(q->md);
 }
 
 struct Qdisc_ops hi_qdisc_ops __read_mostly = {
