@@ -15,30 +15,40 @@
 
 #include "../mpc/control.h"
 
-#define RATE (1 << 0)
+#define RATE_GAIN (100 << 10)
+#define PROBING_PERIOD 3
 #define mpc_cc_log(args, ...) printk(KERN_INFO "mpc_cc: " args, ##__VA_ARGS__)
 
 
 struct control {
     struct model *md;
+
+    bool probing;
+    u32 count_down;
 };
 
 
-inline void set_rate(struct sock * sk, u32 rate) {
+// Set the pacing rate. rate is in bytes/sec.
+inline void set_rate(struct sock * sk, u32 rate, u32 rtt_us) {
     struct tcp_sock *tp = tcp_sk(sk);
 
-    mpc_cc_log("Setting rate to %u\n", rate);
-
     sk->sk_pacing_rate = rate;
-    sk->sk_max_pacing_rate = rate;
-    tp->snd_cwnd = max_t(u32, 1, rate * tp->srtt_us / USEC_PER_SEC);
+    //tp->snd_cwnd = max_t(u32, 1, (rate * rtt)
+    //  / USEC_PER_SEC / tp->mss_cache);
+
+    mpc_cc_log("Setting rate to %u, cwnd = %u, mss = %u\n",
+            rate, tp->snd_cwnd, tp->mss_cache);
 }
 
 void mpc_cc_init(struct sock *sk)
 {
     struct control *ctl = inet_csk_ca(sk);
+
     ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
     model_init(ctl->md, 100, 10, 50, 50, 5, 1);
+
+    ctl->probing = false;
+    ctl->count_down = 0;
 
     mpc_cc_log("init\n");
 }
@@ -85,10 +95,24 @@ u32 mpc_cc_undo_cwnd(struct sock *sk)
 }
 
 
+void mpc_cc_pkts_acked(struct sock *sk, const struct ack_sample *sample)
+{
+    // sample->rtt_us = RTT of acknowledged packet.
+
+    mpc_cc_log("pkts_acked\n");
+
+    mpc_cc_log("rtt_us = %d\n", sample->rtt_us);
+}
+
+
 void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 {
     struct control *ctl = inet_csk_ca(sk);
     struct tcp_sock *tp = tcp_sk(sk);
+
+    // rs->rtt_us = RTT of last packet to be acknowledged.
+    // tp->srtt_us = WMA of RTT
+    // tp->tp->mdev_us = Variance of WMA of RTT
 
     mpc_cc_log("main: srtt_us = %u, rack->rtt_us = %u, rcv_rtt_est = %u\n"
             "rs->rtt_us = %lu, mdev_us = %u\n"
@@ -100,7 +124,27 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
     mpc_cc_log("snd_cwnd = %u, sk_pacing_status = %u\n", tp->snd_cwnd, sk->sk_pacing_status);
 
     if(ctl->md != NULL) {
-        set_rate(sk, control_process(ctl->md, rs->rtt_us));
+        u32 rate;
+        u32 rtt_us = rs->rtt_us;
+
+        if(ctl->count_down == 0) {
+            // Here we're probing. We increase the rate until packet losses are
+            // detected
+
+            rate = control_gain(ctl->md, rtt_us, RATE_GAIN);
+
+            if(ctl->probing && rs->losses > 0) {
+                ctl->probing = false;
+                ctl->count_down = PROBING_PERIOD;
+            } else {
+                ctl->probing = true;
+            }
+        } else {
+            rate = control_process(ctl->md, rtt_us);
+            ctl->count_down -= 1;
+        }
+
+        set_rate(sk, rate, rtt_us);
     } else {
         mpc_cc_log("md was NULL in main\n");
     }
@@ -117,6 +161,7 @@ static struct tcp_congestion_ops tcp_mpc_cc_cong_ops __read_mostly = {
     .ssthresh       = mpc_cc_ssthresh,
     .cong_avoid     = mpc_cc_avoid,
     .undo_cwnd      = mpc_cc_undo_cwnd,
+    .pkts_acked     = mpc_cc_pkts_acked,
     .cong_control   = mpc_cc_main,
 };
 

@@ -10,7 +10,7 @@ inline u32 square_diff_u32(u32 x, u32 y)
     else
         diff = y - x;
 
-    return diff;
+    return diff*diff;
 }
 
 // Make an integer at least 1.
@@ -52,13 +52,6 @@ u32 control_process(struct model *md, u32 rtt_meas)
     rate_opt = LB_D(LB_M(xi - b0/atl1(md->avg_rtt), LB_D(LB_D(1, atl1(psi)), b0))
         + 2*md->avg_rtt - 2*md->predicted_rtt, 2*b0);
 
-    // Clamp rate
-    // TODO: Make bounds less arbitrary.
-    if(rate_opt < 100<<10)
-        rate_opt = 100<<10;
-    else if(rate_opt > 10<<30)
-        rate_opt = 10<<30;
-
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt += b0 * rate_opt;
 
@@ -66,6 +59,32 @@ u32 control_process(struct model *md, u32 rtt_meas)
         + LB_M(md->gamma, md->avg_pacing_rate);
 
     return rate_opt;
+}
+
+
+u32 control_gain(struct model *md, u32 rtt_meas, u32 rate_gain)
+{
+    u32 new_rate;
+
+    control_update(md, rtt_meas);
+
+    md->avg_rtt = LB_M(100 - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
+
+    md->avg_rtt_var =
+        LB_M(100 - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
+        + LB_M(md->gamma, md->avg_rtt_var);
+
+    md->predicted_rtt = control_predict(md);
+
+
+    new_rate = lookback_index(&md->lb_pacing_rate, 0) + rate_gain;
+
+    lookback_add(&md->lb_pacing_rate, new_rate);
+
+    md->avg_pacing_rate = LB_M(100 - md->gamma, new_rate)
+        + LB_M(md->gamma, md->avg_pacing_rate);
+
+    return new_rate;
 }
 
 
