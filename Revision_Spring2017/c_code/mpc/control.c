@@ -54,10 +54,8 @@ u32 control_process(struct model *md, u32 rtt_meas)
 
     // Clamp rate
     // TODO: Make bounds less arbitrary.
-    if(rate_opt < 100<<10)
-        rate_opt = 100<<10;
-    else if(rate_opt > 10<<30)
-        rate_opt = 10<<30;
+    if(rate_opt < 10<<20)
+        rate_opt = 10<<20;
 
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt += b0 * rate_opt;
