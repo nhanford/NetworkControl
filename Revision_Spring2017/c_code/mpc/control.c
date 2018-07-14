@@ -33,10 +33,10 @@ u32 control_process(struct model *md, u32 rtt_meas)
 
     control_update(md, rtt_meas);
 
-    md->avg_rtt = LB_M(100 - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
+    md->avg_rtt = LB_M(LB_ONE - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
 
     md->avg_rtt_var =
-        LB_M(100 - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
+        LB_M(LB_ONE - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
         + LB_M(md->gamma, md->avg_rtt_var);
 
 
@@ -60,7 +60,7 @@ u32 control_process(struct model *md, u32 rtt_meas)
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt += b0 * rate_opt;
 
-    md->avg_pacing_rate = LB_M(100 - md->gamma, rate_opt)
+    md->avg_pacing_rate = LB_M(LB_ONE - md->gamma, rate_opt)
         + LB_M(md->gamma, md->avg_pacing_rate);
 
     return rate_opt;
@@ -73,10 +73,10 @@ u32 control_gain(struct model *md, u32 rtt_meas, u32 rate_gain)
 
     control_update(md, rtt_meas);
 
-    md->avg_rtt = LB_M(100 - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
+    md->avg_rtt = LB_M(LB_ONE - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
 
     md->avg_rtt_var =
-        LB_M(100 - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
+        LB_M(LB_ONE - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
         + LB_M(md->gamma, md->avg_rtt_var);
 
     md->predicted_rtt = control_predict(md);
@@ -86,7 +86,7 @@ u32 control_gain(struct model *md, u32 rtt_meas, u32 rate_gain)
 
     lookback_add(&md->lb_pacing_rate, new_rate);
 
-    md->avg_pacing_rate = LB_M(100 - md->gamma, new_rate)
+    md->avg_pacing_rate = LB_M(LB_ONE - md->gamma, new_rate)
         + LB_M(md->gamma, md->avg_pacing_rate);
 
     return new_rate;

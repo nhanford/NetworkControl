@@ -14,6 +14,7 @@
 #define LB_D(x, y) (((x) << LB_PRECISION) / (y))
 #define LB_FRAC_TO_INT(num, den) (((num) << LB_PRECISION) / den)
 #define LB_PERC_TO_INT(perc) LB_FRAC_TO_INT(perc, 100)
+#define LB_ONE LB_FRAC_TO_INT(1, 1)
 
 
 struct model {

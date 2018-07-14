@@ -127,6 +127,7 @@ static struct sk_buff* hi_dequeue(struct Qdisc *sch)
 next_packet:
     skb = qdisc_dequeue_head(sch);
 
+    // Update rate using MPC.
     if(skb != NULL) {
         if(skb->sk != NULL && skb->sk->sk_protocol == IPPROTO_TCP) {
             // NOTE: There is a need to condsider this for different flows.
@@ -148,6 +149,7 @@ next_packet:
             q->last_srtt = tp->srtt_us;
 
             q->max_rate = control_process(q->md, rtt);
+            q->limitgTgt
 
             hi_log("tp->srtt_us = %u, tp->mdev_us = %u, rtt = %u, q->max_rate = %llu\n",
                     tp->srtt_us, tp->mdev_us, rtt, q->max_rate);
