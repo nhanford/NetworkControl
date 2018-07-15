@@ -1,163 +1,175 @@
 
 #include "control.h"
 
-inline u32 square_diff_u32(u32 x, u32 y)
+// (x - y)^2
+inline real square_diff_real(real x, real y)
 {
-    u32 diff;
+    real diff;
 
-    if(x > y)
-        diff = x - y;
+    if(real_gt(x, y))
+        diff = RS(x, y);
     else
-        diff = y - x;
+        diff = RS(y, x);
 
-    return diff*diff;
+    return RM(diff, diff);
 }
 
-// Make an integer at least 1.
-inline u32 atl1(u32 x)
+// Make a real at least 1 in its least place.
+inline real atl1(real x)
 {
-  if(x < 1)
-    return 1;
+  if(real_lt(x, (real) { 1 }))
+    return (real) { 1 };
   else
     return x;
 }
 
 
-u32 control_predict(struct model *md);
-void control_update(struct model *md, u32 rtt_meas);
+real control_predict(struct model *md);
+void control_update(struct model *md, real rtt_meas);
 
 
-u32 control_process(struct model *md, u32 rtt_meas)
+real control_process(struct model *md, real rtt_meas)
 {
-    u32 psi, xi, b0, rate_opt;
+    real psi, xi, b0, rate_opt;
 
     control_update(md, rtt_meas);
 
-    md->avg_rtt = LB_M(LB_ONE - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
+    md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
+        RM(md->gamma, md->avg_rtt) );
 
     md->avg_rtt_var =
-        LB_M(LB_ONE - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
-        + LB_M(md->gamma, md->avg_rtt_var);
+        RA( RM(RS(REAL_ONE, md->gamma),
+              square_diff_real(md->predicted_rtt, md->avg_rtt)),
+            RM(md->gamma, md->avg_rtt_var));
 
 
     md->predicted_rtt = control_predict(md);
 
 
-    psi = md->psi / atl1(md->avg_rtt_var);
-    xi = md->xi / atl1(md->avg_pacing_rate);
+    psi = RD(md->psi, atl1(md->avg_rtt_var));
+    xi = RD(md->xi, atl1(md->avg_pacing_rate));
     b0 = atl1(md->b[0]);
 
     // Tricky dealing with percetage.
     // The extra 2*'s are there to avoid 1/(psi*b0) potentially going to 0.5.
-    rate_opt = LB_D(LB_M(xi - b0/atl1(md->avg_rtt), LB_D(LB_D(1, atl1(psi)), b0))
-        + 2*md->avg_rtt - 2*md->predicted_rtt, 2*b0);
+    rate_opt = RD(RA(RM(
+            RS(xi, RD(b0, atl1(md->avg_rtt))),
+            RD(REAL_ONE, RM(RM(real_from_int(1), atl1(psi)), b0))),
+        RS(md->avg_rtt, md->predicted_rtt)), b0);
 
     // Clamp rate
     // TODO: Make bounds less arbitrary.
-    if(rate_opt < 10<<20)
-        rate_opt = 10<<20;
+    if(real_lt(rate_opt, real_from_int(10<<20)))
+        rate_opt = real_from_int(10<<20);
 
     lookback_add(&md->lb_pacing_rate, rate_opt);
-    md->predicted_rtt += b0 * rate_opt;
+    md->predicted_rtt = RA(md->predicted_rtt, RM(b0, rate_opt));
 
-    md->avg_pacing_rate = LB_M(LB_ONE - md->gamma, rate_opt)
-        + LB_M(md->gamma, md->avg_pacing_rate);
+    md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
+        RM(md->gamma, md->avg_pacing_rate));
 
     return rate_opt;
 }
 
 
-u32 control_gain(struct model *md, u32 rtt_meas, u32 rate_gain)
+real control_gain(struct model *md, real rtt_meas, real rate_gain)
 {
-    u32 new_rate;
+    real rate_opt;
 
     control_update(md, rtt_meas);
 
-    md->avg_rtt = LB_M(LB_ONE - md->gamma, rtt_meas) + LB_M(md->gamma, md->avg_rtt);
+    md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
+        RM(md->gamma, md->avg_rtt) );
 
     md->avg_rtt_var =
-        LB_M(LB_ONE - md->gamma, square_diff_u32(md->predicted_rtt, md->avg_rtt))
-        + LB_M(md->gamma, md->avg_rtt_var);
+        RA( RM(RS(REAL_ONE, md->gamma),
+              square_diff_real(md->predicted_rtt, md->avg_rtt)),
+            RM(md->gamma, md->avg_rtt_var));
+
 
     md->predicted_rtt = control_predict(md);
 
 
-    new_rate = lookback_index(&md->lb_pacing_rate, 0) + rate_gain;
+    rate_opt = RA(lookback_index(&md->lb_pacing_rate, 0), rate_gain);
 
-    lookback_add(&md->lb_pacing_rate, new_rate);
 
-    md->avg_pacing_rate = LB_M(LB_ONE - md->gamma, new_rate)
-        + LB_M(md->gamma, md->avg_pacing_rate);
+    lookback_add(&md->lb_pacing_rate, rate_opt);
+    md->predicted_rtt = rate_opt;
 
-    return new_rate;
+    md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
+        RM(md->gamma, md->avg_pacing_rate));
+
+    return rate_opt;
 }
 
 
-u32 control_predict(struct model *md)
+real control_predict(struct model *md)
 {
-    int predicted_rtt = 0;
-    int i = 0;
+    real predicted_rtt = REAL_ZERO;
+    size_t i = 0;
 
     for(i = 0; i < md->p; i++)
-        predicted_rtt += LB_M(md->a[i], lookback_index(&md->lb_rtt, i));
+        predicted_rtt = RA(predicted_rtt,
+            RM(md->a[i], lookback_index(&md->lb_rtt, i)));
 
     for(i = 0; i < md->q; i++)
-        predicted_rtt += LB_M(md->b[i], lookback_index(&md->lb_pacing_rate, i));
+        predicted_rtt = RA(predicted_rtt,
+            RM(md->b[i], lookback_index(&md->lb_pacing_rate, i)));
 
     return predicted_rtt;
 }
 
 
-void control_update(struct model *md, u32 rtt_meas)
+void control_update(struct model *md, real rtt_meas)
 {
     int i;
-    u32 error;
-    u32 rtt_norm = 0;
-    u32 rate_norm = 0;
-    u32 total_norm;
+    real error;
+    real rtt_norm = REAL_ZERO;
+    real rate_norm = REAL_ZERO;
+    real total_norm;
     bool add;
 
-    if(md->predicted_rtt < rtt_meas) {
-        error = rtt_meas - md->predicted_rtt;
+    if(real_lt(md->predicted_rtt, rtt_meas)) {
+        error = RS(rtt_meas, md->predicted_rtt);
         add = true;
     } else {
-        error = md->predicted_rtt - rtt_meas;
+        error = RS(md->predicted_rtt, rtt_meas);
         add = false;
     }
 
 
     for(i = 0; i < md->p; i++) {
-        u32 rtt = lookback_index(&md->lb_rtt, i);
-        rtt_norm += rtt*rtt;
+        real rtt = lookback_index(&md->lb_rtt, i);
+        rtt_norm = RA(rtt_norm, RM(rtt, rtt));
     }
 
     for(i = 0; i < md->q; i++) {
-        u32 rate = lookback_index(&md->lb_pacing_rate, i);
-        rate_norm += rate*rate;
+        real rate = lookback_index(&md->lb_pacing_rate, i);
+        rate_norm = RA(rate_norm, RM(rate, rate));
     }
 
-    total_norm = rtt_norm + rate_norm;
+    total_norm = RA(rtt_norm, rate_norm);
 
 
-    if(total_norm > 0) {
+    if(real_gt(total_norm, REAL_ZERO)) {
         for(i = 0; i < md->p; i++) {
-            u32 rtt = lookback_index(&md->lb_rtt, i);
-            u32 delta = LB_M(md->alpha, error * rtt / total_norm);
+            real rtt = lookback_index(&md->lb_rtt, i);
+            real delta = RD(RM(md->alpha, RM(error, rtt)), total_norm);
 
             if(add)
-              md->a[i] += delta;
+              md->a[i] = RA(md->a[i], delta);
             else
-              md->a[i] -= delta;
+              md->a[i] = RS(md->a[i], delta);
         }
 
         for(i = 0; i < md->q; i++) {
-            u32 rate = lookback_index(&md->lb_pacing_rate, i);
-            u32 delta = LB_M(md->alpha, error * rate / total_norm);
+            real rate = lookback_index(&md->lb_pacing_rate, i);
+            real delta = RD(RM(md->alpha, RM(error, rate)), total_norm);
 
             if(add)
-                md->b[i] += delta;
+                md->b[i] = RA(md->b[i], delta);
             else
-                md->b[i] -= delta;
+                md->b[i] = RS(md->b[i], delta);
         }
     }
 

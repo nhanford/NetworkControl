@@ -1,6 +1,8 @@
 
 #include <linux/types.h>
 
+#include "real.h"
+
 #ifndef LOOKBACK_H
 #define LOOKBACK_H
 
@@ -9,20 +11,20 @@
  */
 struct lookback {
     size_t size;
-    u32 *elems;
+    real *elems;
 
     // Points to most recent element.
     size_t head;
 };
 
-void lookback_init(struct lookback *lb, size_t size, u32 elem);
+void lookback_init(struct lookback *lb, size_t size, real elem);
 void lookback_release(struct lookback *lb);
 
 // Add an observation to the lookback.
-void lookback_add(struct lookback *lb, u32 elem);
+void lookback_add(struct lookback *lb, real elem);
 
 // Index an observation, starting with the newest one. Doesn't do bound checks.
-static inline u32 lookback_index(struct lookback *lb, size_t idx)
+static inline real lookback_index(struct lookback *lb, size_t idx)
 {
   if(idx > lb->head)
     return lb->elems[lb->size + lb->head - idx];

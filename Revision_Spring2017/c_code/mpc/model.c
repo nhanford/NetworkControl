@@ -3,29 +3,28 @@
 
 #include "model.h"
 
-// psi, xi, gamma, and alpha are integer percentages (i.e. 32, 50, etc.).
-void model_init(struct model *md, u32 psi, u32 xi, u32 gamma, u32 alpha,
+void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
         size_t p, size_t q)
 {
-    md->psi = LB_PERC_TO_INT(psi);
-    md->xi = LB_PERC_TO_INT(xi);
-    md->gamma = LB_PERC_TO_INT(gamma);
+    md->psi = psi;
+    md->xi = xi;
+    md->gamma = gamma;
 
-    md->avg_rtt = 0;
-    md->avg_rtt_var = 0;
-    md->avg_pacing_rate = 0;
+    md->avg_rtt = REAL_ZERO;
+    md->avg_rtt_var = REAL_ZERO;
+    md->avg_pacing_rate = REAL_ZERO;
 
-    md->predicted_rtt = 0;
+    md->predicted_rtt = REAL_ZERO;
 
     md->p = p;
     md->q = q;
 
-    md->alpha = LB_PERC_TO_INT(alpha);
-    md->a = kmalloc(p*sizeof(u32), GFP_KERNEL);
-    md->b = kmalloc(q*sizeof(u32), GFP_KERNEL);
+    md->alpha = alpha;
+    md->a = kmalloc(p*sizeof(real), GFP_KERNEL);
+    md->b = kmalloc(q*sizeof(real), GFP_KERNEL);
 
-    lookback_init(&md->lb_rtt, p, 0);
-    lookback_init(&md->lb_pacing_rate, q, 0);
+    lookback_init(&md->lb_rtt, p, REAL_ZERO);
+    lookback_init(&md->lb_pacing_rate, q, REAL_ZERO);
 }
 
 void model_release(struct model *md)
