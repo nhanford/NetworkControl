@@ -141,8 +141,8 @@ next_packet:
             // srtt.
             //
             // TODO: Don't hardcode alpha.
-            if(q->last_srtt + 8*tp->srtt_us > 8*q->last_srtt)
-                rtt = q->last_srtt + 8*tp->srtt_us - 8*q->last_srtt;
+            if(q->last_srtt + (tp->srtt_us<<3) > (q->last_srtt<<3))
+                rtt = q->last_srtt + tp->srtt_us<<3 - q->last_srtt<<3;
             else
                 rtt = tp->srtt_us;
 
