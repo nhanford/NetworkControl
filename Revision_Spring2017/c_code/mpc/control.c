@@ -1,5 +1,6 @@
 
 #include "control.h"
+#include "util.h"
 
 // (x - y)^2
 inline real square_diff_real(real x, real y)
@@ -32,6 +33,8 @@ real control_process(struct model *md, real rtt_meas)
 {
     real psi, xi, b0, rate_opt;
 
+    mpc_log("rtt_meas = %lluus\n", real_floor(RM(real_from_int(1000000), rtt_meas)));
+
     control_update(md, rtt_meas);
 
     md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
@@ -59,14 +62,16 @@ real control_process(struct model *md, real rtt_meas)
 
     // Clamp rate
     // TODO: Make bounds less arbitrary.
-    if(real_lt(rate_opt, real_from_int(10<<20)))
-        rate_opt = real_from_int(10<<20);
+    if(real_lt(rate_opt, real_from_int((100<<20)>>3)))
+        rate_opt = real_from_int((100<<20)>>3);
 
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt = RA(md->predicted_rtt, RM(b0, rate_opt));
 
     md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
         RM(md->gamma, md->avg_pacing_rate));
+
+    mpc_log("rate_opt = %llu bytes/s\n", real_floor(rate_opt));
 
     return rate_opt;
 }

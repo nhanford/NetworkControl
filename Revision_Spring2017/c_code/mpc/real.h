@@ -42,7 +42,7 @@ static inline real real_add(real x, real y)
 
 static inline real real_sub(real x, real y)
 {
-    return (real) { x.value + y.value };
+    return (real) { x.value - y.value };
 }
 
 static inline real real_mul(real x, real y)

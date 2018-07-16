@@ -11,11 +11,13 @@ rtt = []
 rttVar = []
 rate = []
 retrans = []
+cwnd = []
 
 parser = argparse.ArgumentParser()
-parser.add_argument('FILE', type=str)
+parser.add_argument('TEST', type=str)
 args = parser.parse_args()
-dataFile = args.FILE
+
+dataFile = args.TEST + '.json'
 
 with open(dataFile) as data:
     pdata = json.load(data)
@@ -27,14 +29,18 @@ with open(dataFile) as data:
             rttVar.append(strm['rttvar'])
             rate.append(strm['bits_per_second'])
             retrans.append(strm['retransmits'])
+            cwnd.append(strm['snd_cwnd'])
 
 rtt_adj = np.array(rtt)/1000
 rttVar_adj = np.array(rttVar)/1000
 rate_adj = list([r/(1<<20) for r in rate])
 
-fig, (ax1, ax3) = plt.subplots(1, 2)
+fig, ax = plt.subplots(2, 2)
+ax1 = ax[0][0]
 ax2 = ax1.twinx()
+ax3 = ax[0][1]
 ax4 = ax3.twinx()
+ax5 = ax[1][0]
 
 ax1.plot(startTime, rtt_adj, 'r-', label = 'rtt')
 ax1.set_ylabel('rtt (ms)')
@@ -49,6 +55,9 @@ ax3.set_ylabel('rate (mbit/s)')
 
 ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
+
+ax5.plot(startTime, cwnd, 'co', label = 'Congestion Window')
+ax5.set_ylabel('Congestion Window')
 
 fig.legend()
 
