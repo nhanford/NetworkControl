@@ -10,6 +10,7 @@ startTime = []
 rtt = []
 rttVar = []
 rate = []
+retrans = []
 
 parser = argparse.ArgumentParser()
 parser.add_argument('FILE', type=str)
@@ -25,19 +26,30 @@ with open(dataFile) as data:
             rtt.append(strm['rtt'])
             rttVar.append(strm['rttvar'])
             rate.append(strm['bits_per_second'])
+            retrans.append(strm['retransmits'])
 
-plt.figure(0)
-plt.plot(startTime, np.array(rtt)/1000, 'r-',
-        startTime, np.array(rttVar)/1000, 'g^')
-plt.legend(['rtt (ms)', 'rtt variance 0(ms)'])
-plt.title('BWctl Plot')
-plt.xlabel('Time (s)')
+rtt_adj = np.array(rtt)/1000
+rttVar_adj = np.array(rttVar)/1000
+rate_adj = list([r/(1<<20) for r in rate])
 
-plt.figure(1)
-rate = list([r/(1<<20) for r in rate])
-plt.ylim(-10, 2*max([r for r in rate if r < np.percentile(rate, 99)]))
-plt.plot(startTime, rate, 'bs')
-plt.legend(['rate (mbits/s)'])
-plt.title('BWctl Plot')
-plt.xlabel('Time (s)')
+fig, (ax1, ax3) = plt.subplots(1, 2)
+ax2 = ax1.twinx()
+ax4 = ax3.twinx()
+
+ax1.plot(startTime, rtt_adj, 'r-', label = 'rtt')
+ax1.set_ylabel('rtt (ms)')
+
+ax2.set_ylim(-1, max(rtt_adj))
+ax2.plot(startTime, rttVar_adj, 'g', label = 'rtt variance')
+ax2.set_ylabel('rtt variance (ms)')
+
+ax3.set_ylim(-10, 2*np.percentile(rate_adj, 99))
+ax3.plot(startTime, rate_adj, 'bs', label = 'rate')
+ax3.set_ylabel('rate (mbit/s)')
+
+ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
+ax4.set_ylabel('Retransmits')
+
+fig.legend()
+
 plt.show()

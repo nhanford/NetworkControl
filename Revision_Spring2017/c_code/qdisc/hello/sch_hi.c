@@ -142,7 +142,7 @@ next_packet:
             //
             // TODO: Don't hardcode alpha.
             if(q->last_srtt + (tp->srtt_us<<3) > (q->last_srtt<<3))
-                rtt = q->last_srtt + tp->srtt_us<<3 - q->last_srtt<<3;
+                rtt = q->last_srtt + (tp->srtt_us<<3) - (q->last_srtt<<3);
             else
                 rtt = tp->srtt_us;
 
