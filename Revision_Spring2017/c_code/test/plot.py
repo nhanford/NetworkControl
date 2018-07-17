@@ -28,7 +28,7 @@ args = parser.parse_args()
 
 bwctlFile = args.TEST + '-bwctl.json'
 dmesgFile = args.TEST + '-dmesg.txt'
-etimeFile = args.TEST + '-etime.txt'
+timeFile = args.TEST + '-time.txt'
 
 dmRTT = re.compile('\[([0-9]*.[0-9]*)\] mpc: rtt_meas = ([0-9]+)us')
 dmRate = re.compile('\[([0-9]*.[0-9]*)\] mpc: rate_opt = ([0-9]+) bytes/s')
@@ -49,19 +49,21 @@ with open(bwctlFile) as data:
 
 # TODO: 0.25 is just to ensure we don't miss some messages, probably should have
 # a more accurate determiner for start time.
-dmesgStartTime = float(open(etimeFile).readline()) - bwctlTestDuration - 0.25
+dmesgTimes = open(timeFile).readlines()
+dmesgStart = float(dmesgTimes[0])
+dmesgEnd = float(dmesgTimes[1])
 
 with open(dmesgFile) as data:
     for line in data:
         rttM = dmRTT.match(line)
         rateM = dmRate.match(line)
 
-        if rttM is not None and float(rttM[1]) > dmesgStartTime:
+        if rttM is not None and dmesgStart <= float(rttM[1]) <= dmesgEnd:
             mpcRTT.append(int(rttM[2]))
-            mpcRTTTime.append(float(rttM[1]) - dmesgStartTime)
-        elif rateM is not None and float(rateM[1]) > dmesgStartTime:
+            mpcRTTTime.append(float(rttM[1]) - dmesgStart)
+        elif rateM is not None and dmesgStart < float(rateM[1]) < dmesgEnd:
             mpcRate.append(int(rateM[2]))
-            mpcRateTime.append(float(rateM[1]) - dmesgStartTime)
+            mpcRateTime.append(float(rateM[1]) - dmesgStart)
 
 
 rtt_adj = np.array(rtt)/1000
