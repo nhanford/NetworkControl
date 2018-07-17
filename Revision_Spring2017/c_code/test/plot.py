@@ -68,8 +68,8 @@ rtt_adj = np.array(rtt)/1000
 rttVar_adj = np.array(rttVar)/1000
 rate_adj = list([r/(1<<20) for r in rate])
 
-mpcRTT_adj = np.array(mpcRTT)/1000
-mpcRate_adj = np.array(mpcRate) >> (20 - 3)
+mpcRTT_adj = list(map(lambda x: x/1000, mpcRTT))
+mpcRate_adj = list(map(lambda x: x >> (20 - 3), mpcRate))
 
 fig, ax = plt.subplots(2, 2, figsize=(10, 10))
 ax1 = ax[0][0]
@@ -105,7 +105,7 @@ ax6.plot(mpcRTTTime, mpcRTT_adj, 'gs', label = 'MPC Observed RTT')
 ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('RTT (ms)')
 
-ax7.plot(mpcRateTime, mpcRate_adj, 'bs', label = 'MPC Set Rate')
+ax7.plot(mpcRateTime, mpcRate_adj, 'rs', label = 'MPC Set Rate')
 ax7.set_ylabel('Rate (mbit/s)')
 
 fig.legend()
