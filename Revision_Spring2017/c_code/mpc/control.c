@@ -81,6 +81,8 @@ real control_gain(struct model *md, real rtt_meas, real rate_gain)
 {
     real rate_opt;
 
+    mpc_log("rtt_meas = %lluus\n", real_floor(RM(real_from_int(1000000), rtt_meas)));
+
     control_update(md, rtt_meas);
 
     md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
@@ -103,6 +105,8 @@ real control_gain(struct model *md, real rtt_meas, real rate_gain)
 
     md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
         RM(md->gamma, md->avg_pacing_rate));
+
+    mpc_log("rate_opt = %llu bytes/s\n", real_floor(rate_opt));
 
     return rate_opt;
 }
