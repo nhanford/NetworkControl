@@ -13,6 +13,7 @@ rttVar = []
 rate = []
 retrans = []
 cwnd = []
+bwctlTestDuration = 0
 
 mpcRTT = []
 mpcRTTTime = []
@@ -27,15 +28,15 @@ args = parser.parse_args()
 
 bwctlFile = args.TEST + '-bwctl.json'
 dmesgFile = args.TEST + '-dmesg.txt'
-stimeFile = args.TEST + '-stime.txt'
+etimeFile = args.TEST + '-etime.txt'
 
 dmRTT = re.compile('\[([0-9]*.[0-9]*)\] mpc: rtt_meas = ([0-9]+)us')
 dmRate = re.compile('\[([0-9]*.[0-9]*)\] mpc: rate_opt = ([0-9]+) bytes/s')
 
-dmesgStartTime = float(open(stimeFile).readline())
-
 with open(bwctlFile) as data:
     pdata = json.load(data)
+
+    bwctlTestDuration = pdata['start']['test_start']['duration']
 
     for interval in pdata['intervals']:
         for strm in interval['streams']:
@@ -45,6 +46,10 @@ with open(bwctlFile) as data:
             rate.append(strm['bits_per_second'])
             retrans.append(strm['retransmits'])
             cwnd.append(strm['snd_cwnd'])
+
+# TODO: 0.25 is just to ensure we don't miss some messages, probably should have
+# a more accurate determiner for start time.
+dmesgStartTime = float(open(etimeFile).readline()) - bwctlTestDuration - 0.25
 
 with open(dmesgFile) as data:
     for line in data:
@@ -86,19 +91,21 @@ ax2.set_ylabel('rtt variance (ms)')
 
 ax3.set_ylim(-10, 2*np.percentile(rate_adj, 99))
 ax3.plot(startTime, rate_adj, 'bs', label = 'rate')
+ax3.set_xlabel('Time (s)')
 ax3.set_ylabel('rate (mbit/s)')
 
 ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
 
 ax5.plot(startTime, cwnd, 'co', label = 'Congestion Window')
+ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window')
 
-ax6.plot(mpcRTTTime, mpcRTT_adj, 'gs', label = 'MPC Set RTT')
-ax6.set_xlabel('Time (s), not related to others')
+ax6.plot(mpcRTTTime, mpcRTT_adj, 'gs', label = 'MPC Observed RTT')
+ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('RTT (ms)')
 
-ax7.plot(mpcRateTime, mpcRate_adj, 'bs', label = 'MPC Observed Rate')
+ax7.plot(mpcRateTime, mpcRate_adj, 'bs', label = 'MPC Set Rate')
 ax7.set_ylabel('Rate (mbit/s)')
 
 fig.legend()
