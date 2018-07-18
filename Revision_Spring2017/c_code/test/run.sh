@@ -3,6 +3,9 @@
 test=$1
 dest=$2
 
+# Limit journal output collected.
+loglimit=10000
+
 # Output start and end times so we know where to look in dmesg.
 date +'%s' > "$test-time.txt"
 
@@ -12,4 +15,4 @@ date +'%s' >> "$test-time.txt"
 
 mv $outputFiles "$test-bwctl.json"
 
-journalctl -k -o json-pretty > "$test-dmesg.txt"
+journalctl -k -o json | tail -n $loglimit > "$test-dmesg.json"
