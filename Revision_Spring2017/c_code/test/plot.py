@@ -30,8 +30,8 @@ bwctlFile = args.TEST + '-bwctl.json'
 dmesgFile = args.TEST + '-dmesg.txt'
 timeFile = args.TEST + '-time.txt'
 
-dmRTT = re.compile('\[([0-9]*.[0-9]*)\] mpc: rtt_meas = ([0-9]+)us')
-dmRate = re.compile('\[([0-9]*.[0-9]*)\] mpc: rate_opt = ([0-9]+) bytes/s')
+dmRTT = re.compile('mpc: rtt_meas = ([0-9]+)us')
+dmRate = re.compile('mpc: rate_opt = ([0-9]+) bytes/s')
 
 with open(bwctlFile) as data:
     pdata = json.load(data)
@@ -54,16 +54,20 @@ dmesgStart = float(dmesgTimes[0])
 dmesgEnd = float(dmesgTimes[1])
 
 with open(dmesgFile) as data:
-    for line in data:
-        rttM = dmRTT.match(line)
-        rateM = dmRate.match(line)
+    msgs = json.load(data)
 
-        if rttM is not None and dmesgStart <= float(rttM[1]):
-            mpcRTT.append(int(rttM[2]))
-            mpcRTTTime.append(float(rttM[1]) - dmesgEnd + bwctlTestDuration)
-        elif rateM is not None and dmesgStart < float(rateM[1]):
-            mpcRate.append(int(rateM[2]))
-            mpcRateTime.append(float(rateM[1]) - dmesgEnd + bwctlTestDuration)
+    for msg in msgs:
+        rttM = dmRTT.match(msg['MESSAGE'])
+        rateM = dmRate.match(msg['MESSAGE'])
+        time = float(msg['__REALTIME_TIMESTAMP'])/1e6
+        sinceBWCTL = time - dmesgEnd + bwctlTestDuration
+
+        if rttM is not None and dmesgStart <= time <= dmesgEnd:
+            mpcRTT.append(int(rttM[1]))
+            mpcRTTTime.append(sinceBWCTL)
+        elif rateM is not None and dmesgStart <= time <= dmesgEnd:
+            mpcRate.append(int(rateM[1]))
+            mpcRateTime.append(sinceBWCTL)
 
 
 rtt_adj = np.array(rtt)/1000
