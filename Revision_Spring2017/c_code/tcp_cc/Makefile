@@ -1,5 +1,5 @@
 
-QDEV := enp0s3
+QDEV := eth3
 MPC_DIR = ../mpc
 
 obj-m += mpc_cc.o

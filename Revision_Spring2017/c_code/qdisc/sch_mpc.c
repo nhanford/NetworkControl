@@ -56,8 +56,6 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
     struct mpc_sched_data *q = qdisc_priv(sch);
     u64 now = ktime_get_ns();
 
-    mpc_log("mpc_enqueue\n");
-
     if(skb != NULL) {
         u64 min_delay;
 
@@ -70,9 +68,6 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         // burst.
         q->last_time_to_send = max_t(u64, now, q->last_time_to_send) + min_delay;
         mpc_skb_cb(skb)->time_to_send = q->last_time_to_send;
-
-        mpc_log("enq, skb->len = %d, min_delay = %lld.%llds\n",
-                skb->len, min_delay/NSEC_PER_SEC, min_delay%NSEC_PER_SEC);
     }
 
     if (likely(sch->q.qlen < sch->limit))
@@ -87,8 +82,6 @@ static struct sk_buff* mpc_dequeue(struct Qdisc *sch)
     struct sk_buff *skb = NULL;
     u64 now = ktime_get_ns();
     u64 next_tts = 0;  // The next time to send a packet.
-
-    mpc_log("mpc_dequeue\n");
 
     // skb corresponds to whatever packet is ready, NULL if none are.
     skb = qdisc_peek_head(sch);
@@ -150,9 +143,6 @@ next_packet:
 
             q->max_rate = real_floor(control_process(q->md,
                   real_from_frac(rtt, USEC_PER_SEC)));
-
-            mpc_log("tp->srtt_us = %u, tp->mdev_us = %u, rtt = %u, q->max_rate = %llu\n",
-                    tp->srtt_us, tp->mdev_us, rtt, q->max_rate);
         }
 
         mpc_log("deq, skb->len = %d, cb->pkt_len = %d\n",
@@ -170,8 +160,6 @@ exit_dequeue:
 }
 
 static struct sk_buff* mpc_peek(struct Qdisc *sch) {
-    mpc_log("mpc_peek\n");
-
     return qdisc_peek_head(sch);
 }
 
@@ -192,8 +180,6 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
     struct nlattr *tb[TCA_MPC_MAX + 1];
     int err;
 
-    mpc_log("mpc_change\n");
-
     if (opt == NULL)
         return -EINVAL;
 
@@ -201,18 +187,11 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
     if (err < 0)
         return err;
 
-    if (tb[TCA_MPC_LIMIT]) {
+    if (tb[TCA_MPC_LIMIT])
         sch->limit = nla_get_u32(tb[TCA_MPC_LIMIT]);
-        mpc_log("Set limit to %d\n", sch->limit);
-    } else {
-        mpc_log("No set limit %p stays at %d\n", tb[TCA_MPC_LIMIT], sch->limit);
-    }
 
-    if (tb[TCA_MPC_MAXRATE]) {
+    if (tb[TCA_MPC_MAXRATE])
         q->max_rate = nla_get_u32(tb[TCA_MPC_MAXRATE]);
-
-        mpc_log("Set max_rate to %lld\n", q->max_rate);
-    }
 
     return err;
 }
@@ -226,8 +205,6 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
 #endif
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-
-    mpc_log("Initialized\n");
 
     q->max_rate = ~0U;
     q->last_time_to_send = 0;
@@ -275,8 +252,6 @@ static void mpc_reset(struct Qdisc *sch)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
 
-    mpc_log("mpc_reset\n");
-
     qdisc_reset_queue(sch);
     qdisc_watchdog_cancel(&q->watchdog);
 }
@@ -284,7 +259,6 @@ static void mpc_reset(struct Qdisc *sch)
 static void mpc_destroy(struct Qdisc *sch)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-    mpc_log("mpc_destroy\n");
 
     model_release(q->md);
     kfree(q->md);
@@ -313,7 +287,6 @@ MODULE_VERSION("0.01");
 
 static int __init mpcqd_init(void) {
     register_qdisc(&mpc_qdisc_ops);
-    printk(KERN_INFO "Registered qdisc %s\n", mpc_qdisc_ops.id);
     printk(KERN_INFO "Loaded module mpcqd\n");
 
     return 0;
@@ -321,7 +294,6 @@ static int __init mpcqd_init(void) {
 
 static void __exit mpcqd_exit(void) {
     unregister_qdisc(&mpc_qdisc_ops);
-    printk(KERN_INFO "Unregistered qdisc %s\n", mpc_qdisc_ops.id);
     printk(KERN_INFO "Removed module mpcqd\n");
 }
 

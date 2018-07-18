@@ -58,12 +58,12 @@ with open(dmesgFile) as data:
         rttM = dmRTT.match(line)
         rateM = dmRate.match(line)
 
-        if rttM is not None and dmesgStart <= float(rttM[1]) <= dmesgEnd:
+        if rttM is not None and dmesgStart <= float(rttM[1]):
             mpcRTT.append(int(rttM[2]))
-            mpcRTTTime.append(float(rttM[1]) - dmesgStart)
-        elif rateM is not None and dmesgStart < float(rateM[1]) < dmesgEnd:
+            mpcRTTTime.append(float(rttM[1]) - dmesgEnd + bwctlTestDuration)
+        elif rateM is not None and dmesgStart < float(rateM[1]):
             mpcRate.append(int(rateM[2]))
-            mpcRateTime.append(float(rateM[1]) - dmesgStart)
+            mpcRateTime.append(float(rateM[1]) - dmesgEnd + bwctlTestDuration)
 
 
 rtt_adj = np.array(rtt)/1000

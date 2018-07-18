@@ -2,7 +2,7 @@
 #ifndef SCH_MPC_H
 #define SCH_MPC_H
 
-#define mpc_log(args, ...) printk(KERN_INFO "qdisk mpc: " args, ##__VA_ARGS__)
+#define mpc_log(args, ...) printk(KERN_INFO "mpc qdisc: " args, ##__VA_ARGS__)
 
 enum {
     TCA_MPC_UNSPEC,

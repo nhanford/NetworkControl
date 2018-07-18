@@ -12,3 +12,5 @@ To plot the data from a test run
 ```
 > python plot.py TEST [--title TITLE] [--output FILE]
 ```
+
+Note that the times from BWCTL and the kernel modules don't line up.

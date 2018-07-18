@@ -12,4 +12,4 @@ cat /proc/uptime | cut -d' ' -f1 >> "$test-time.txt"
 
 mv $outputFiles "$test-bwctl.json"
 
-dmesg | grep 'mpc: ' > "$test-dmesg.txt"
+dmesg > "$test-dmesg.txt"

@@ -1,5 +1,5 @@
 
-QDEV := enp0s3
+QDEV := eth3
 IPROUTE2 := ./iproute2
 MPC_DIR = ../mpc
 

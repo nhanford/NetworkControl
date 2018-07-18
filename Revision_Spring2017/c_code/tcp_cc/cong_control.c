@@ -17,7 +17,7 @@
 
 #define RATE_GAIN (100 << 10)
 #define PROBING_PERIOD 40
-#define mpc_cc_log(args, ...) printk(KERN_INFO "mpc_cc: " args, ##__VA_ARGS__)
+#define mpc_cc_log(args, ...) printk(KERN_INFO "mpc cc: " args, ##__VA_ARGS__)
 
 
 struct control {
@@ -30,14 +30,11 @@ struct control {
 
 // Set the pacing rate. rate is in bytes/sec.
 inline void set_rate(struct sock * sk, u32 rate, u32 rtt_us) {
-    struct tcp_sock *tp = tcp_sk(sk);
+    //struct tcp_sock *tp = tcp_sk(sk);
 
     sk->sk_pacing_rate = rate;
     //tp->snd_cwnd = max_t(u32, 1, (rate * rtt)
     //  / USEC_PER_SEC / tp->mss_cache);
-
-    mpc_cc_log("Setting rate to %u, cwnd = %u, mss = %u\n",
-            rate, tp->snd_cwnd, tp->mss_cache);
 }
 
 void mpc_cc_init(struct sock *sk)
@@ -50,8 +47,6 @@ void mpc_cc_init(struct sock *sk)
 
     ctl->probing = false;
     ctl->count_down = 0;
-
-    mpc_cc_log("init\n");
 }
 
 
@@ -59,13 +54,9 @@ void mpc_cc_release(struct sock *sk)
 {
     struct control *ctl = inet_csk_ca(sk);
 
-    mpc_cc_log("release\n");
-
     if(ctl->md != NULL) {
         model_release(ctl->md);
         kfree(ctl->md);
-    } else {
-        mpc_cc_log("md was NULL in release\n");
     }
 }
 
@@ -73,15 +64,12 @@ void mpc_cc_release(struct sock *sk)
 u32 mpc_cc_ssthresh(struct sock *sk)
 {
     u32 ret = tcp_reno_ssthresh(sk);
-
-    mpc_cc_log("ssthresh\n");
     return ret;
 }
 
 
 void mpc_cc_avoid(struct sock *sk, u32 ack, u32 acked)
 {
-    mpc_cc_log("avoid\n");
     tcp_reno_cong_avoid(sk, ack, acked);
 }
 
@@ -90,8 +78,6 @@ u32 mpc_cc_undo_cwnd(struct sock *sk)
 {
     u32 ret = tcp_reno_undo_cwnd(sk);
 
-    mpc_cc_log("undo\n");
-
     return ret;
 }
 
@@ -99,10 +85,6 @@ u32 mpc_cc_undo_cwnd(struct sock *sk)
 void mpc_cc_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 {
     // sample->rtt_us = RTT of acknowledged packet.
-
-    mpc_cc_log("pkts_acked\n");
-
-    mpc_cc_log("rtt_us = %d\n", sample->rtt_us);
 }
 
 
@@ -115,14 +97,8 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
     // tp->srtt_us = WMA of RTT
     // tp->tp->mdev_us = Variance of WMA of RTT
 
-    mpc_cc_log("main: srtt_us = %u, rack->rtt_us = %u, rcv_rtt_est = %u\n"
-            "rs->rtt_us = %lu, mdev_us = %u\n"
-            "sk_pacing_rate = %u, sk_max_pacing_rate = %u\n",
-            tp->srtt_us, tp->rack.rtt_us, tp->rcv_rtt_est.rtt_us,
-            rs->rtt_us, tp->mdev_us,
-            sk->sk_pacing_rate, sk->sk_max_pacing_rate);
-
-    mpc_cc_log("snd_cwnd = %u, sk_pacing_status = %u\n", tp->snd_cwnd, sk->sk_pacing_status);
+    mpc_cc_log("main, srtt_us = %u, rs->rtt_us = %lu, mdev_us = %u, sk_pacing_rate = %u\n",
+            tp->srtt_us, rs->rtt_us, tp->mdev_us, sk->sk_pacing_rate);
 
     if(ctl->md != NULL) {
         u32 rate;
@@ -149,8 +125,6 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
         }
 
         set_rate(sk, rate, rtt_us);
-    } else {
-        mpc_cc_log("md was NULL in main\n");
     }
 }
 
