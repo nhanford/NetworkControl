@@ -20,11 +20,15 @@ mpcRTTTime = []
 mpcRate = []
 mpcRateTime = []
 
-parser = argparse.ArgumentParser()
-parser.add_argument('TEST', type=str)
-parser.add_argument('--title', type=str)
-parser.add_argument('--output', type=str)
-parser.add_argument('--limit-perc', type=int)
+parser = argparse.ArgumentParser(description="Plots test results.")
+parser.add_argument('TEST', type=str,
+        help="The name of the test to run.")
+parser.add_argument('--title', type=str,
+        help="Sets title for figure.")
+parser.add_argument('--output', type=str,
+        help="Sets output file.")
+parser.add_argument('--limit-perc', type=int,
+        help="Limits output range to within double of a certain percentile.")
 args = parser.parse_args()
 
 bwctlFile = args.TEST + '-bwctl.json'
@@ -89,17 +93,17 @@ ax7 = ax6.twinx()
 
 ax1.plot(startTime, rtt_adj, 'r-', label = 'rtt')
 ax1.set_xlabel('Time (s)')
-ax1.set_ylabel('rtt (ms)')
+ax1.set_ylabel('RTT (ms)')
 
 ax2.set_ylim(-1, max(rtt_adj))
 ax2.plot(startTime, rttVar_adj, 'g', label = 'rtt variance')
 ax2.set_xlabel('Time (s)')
-ax2.set_ylabel('rtt variance (ms)')
+ax2.set_ylabel('RTT variance (ms)')
 
 ax3.set_ylim(-10, 2*np.percentile(rate_adj, 99))
 ax3.plot(startTime, rate_adj, 'b', label = 'rate')
 ax3.set_xlabel('Time (s)')
-ax3.set_ylabel('rate (mbit/s)')
+ax3.set_ylabel('Rate (mbit/s)')
 
 ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
@@ -108,12 +112,12 @@ ax5.plot(startTime, cwnd, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window')
 
-ax6.plot(mpcRTTTime, mpcRTT_adj, 'g', label = 'MPC Observed RTT')
+ax6.plot(mpcRTTTime, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
 ax6.set_xlabel('Time (s)')
-ax6.set_ylabel('RTT (ms)')
+ax6.set_ylabel('MPC RTT (ms)')
 
-ax7.plot(mpcRateTime, mpcRate_adj, 'r', label = 'MPC Set Rate')
-ax7.set_ylabel('Rate (mbit/s)')
+ax7.plot(mpcRateTime, mpcRate_adj, 'b', label = 'MPC Set Rate')
+ax7.set_ylabel('MPC Rate (mbit/s)')
 
 if args.limit_perc is not None:
     ax1.set_ylim(0, np.percentile(rtt_adj, args.limit_perc)*2)
