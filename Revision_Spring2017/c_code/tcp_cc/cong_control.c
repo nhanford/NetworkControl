@@ -37,10 +37,10 @@ inline void set_rate(struct sock * sk) {
     sk->sk_pacing_rate = ctl->rate;
 
     tp->snd_cwnd = max_t(u32, 1, (ctl->rate / tp->mss_cache)
-		    * tp->srtt_us / USEC_PER_SEC);
+            * tp->srtt_us / USEC_PER_SEC);
 
     mpc_cc_log("rate = %u, srtt_us= %u, mss = %u, snd_cwnd = %u\n",
-		    ctl->rate, tp->srtt_us, tp->mss_cache, tp->snd_cwnd);
+            ctl->rate, tp->srtt_us, tp->mss_cache, tp->snd_cwnd);
 }
 
 void mpc_cc_init(struct sock *sk)
@@ -49,7 +49,7 @@ void mpc_cc_init(struct sock *sk)
 
     ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
     model_init(ctl->md, real_from_frac(1, 1), real_from_frac(1, 10),
-        real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
+            real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
 
     ctl->probing = false;
     ctl->count_down = 0;
@@ -111,9 +111,9 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
     // tp->tp->mdev_us = Variance of WMA of RTT
 
     mpc_cc_log("main, srtt_us = %u, rs->rtt_us = %lu, sk_pacing_rate = %u,"
-		    " snd_cwnd = %u, mss = %u\n",
-		    tp->srtt_us, rs->rtt_us, sk->sk_pacing_rate,
-		    tp->snd_cwnd, tp->mss_cache);
+            " snd_cwnd = %u, mss = %u\n",
+            tp->srtt_us, rs->rtt_us, sk->sk_pacing_rate,
+            tp->snd_cwnd, tp->mss_cache);
 
     if(ctl->md != NULL) {
         u32 rtt_us = rs->rtt_us;
@@ -123,8 +123,8 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             // detected
 
             ctl->rate = real_floor(control_gain(ctl->md,
-                  real_from_frac(rtt_us, USEC_PER_SEC),
-                  real_from_int(RATE_GAIN)));
+                        real_from_frac(rtt_us, USEC_PER_SEC),
+                        real_from_int(RATE_GAIN)));
 
             if(ctl->probing && rs->losses > 0) {
                 ctl->probing = false;
@@ -134,7 +134,7 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             }
         } else {
             ctl->rate = real_floor(control_process(ctl->md,
-                  real_from_frac(rtt_us, USEC_PER_SEC)));
+                        real_from_frac(rtt_us, USEC_PER_SEC)));
             ctl->count_down -= 1;
         }
     }
