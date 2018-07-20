@@ -78,6 +78,7 @@ with open(dmesgFile) as data:
 rtt_adj = np.array(rtt)/1000
 rttVar_adj = np.array(rttVar)/1000
 rate_adj = list([r/(1<<20) for r in rate])
+cwnd_adj = list([w/(1<<10) for w in cwnd])
 
 mpcRTT_adj = list(map(lambda x: x/1000, mpcRTT))
 mpcRate_adj = list(map(lambda x: x >> (20 - 3), mpcRate))
@@ -108,9 +109,9 @@ ax3.set_ylabel('Rate (mbit/s)')
 ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
 
-ax5.plot(startTime, cwnd, 'c', label = 'Congestion Window')
+ax5.plot(startTime, cwnd_adj, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
-ax5.set_ylabel('Congestion Window')
+ax5.set_ylabel('Congestion Window (kbytes)')
 
 ax6.plot(mpcRTTTime, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
 ax6.set_xlabel('Time (s)')
