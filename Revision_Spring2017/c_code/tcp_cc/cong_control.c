@@ -23,18 +23,24 @@
 struct control {
     struct model *md;
 
+    u32 rate;
     bool probing;
     u32 count_down;
 };
 
 
 // Set the pacing rate. rate is in bytes/sec.
-inline void set_rate(struct sock * sk, u32 rate, u32 rtt_us) {
-    //struct tcp_sock *tp = tcp_sk(sk);
+inline void set_rate(struct sock * sk) {
+    struct control *ctl = inet_csk_ca(sk);
+    struct tcp_sock *tp = tcp_sk(sk);
 
-    sk->sk_pacing_rate = rate;
-    //tp->snd_cwnd = max_t(u32, 1, (rate * rtt)
-    //  / USEC_PER_SEC / tp->mss_cache);
+    sk->sk_pacing_rate = ctl->rate;
+
+    tp->snd_cwnd = max_t(u32, 1, (ctl->rate / tp->mss_cache)
+		    * tp->srtt_us / USEC_PER_SEC);
+
+    mpc_cc_log("rate = %u, srtt_us= %u, mss = %u, snd_cwnd = %u\n",
+		    ctl->rate, tp->srtt_us, tp->mss_cache, tp->snd_cwnd);
 }
 
 void mpc_cc_init(struct sock *sk)
@@ -64,6 +70,8 @@ void mpc_cc_release(struct sock *sk)
 u32 mpc_cc_ssthresh(struct sock *sk)
 {
     u32 ret = tcp_reno_ssthresh(sk);
+    set_rate(sk);
+
     return ret;
 }
 
@@ -71,20 +79,25 @@ u32 mpc_cc_ssthresh(struct sock *sk)
 void mpc_cc_avoid(struct sock *sk, u32 ack, u32 acked)
 {
     tcp_reno_cong_avoid(sk, ack, acked);
+    set_rate(sk);
 }
 
 
 u32 mpc_cc_undo_cwnd(struct sock *sk)
 {
+    struct tcp_sock *tp = tcp_sk(sk);
     u32 ret = tcp_reno_undo_cwnd(sk);
 
-    return ret;
+    set_rate(sk);
+
+    return tp->snd_cwnd;
 }
 
 
 void mpc_cc_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 {
     // sample->rtt_us = RTT of acknowledged packet.
+    set_rate(sk);
 }
 
 
@@ -97,18 +110,19 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
     // tp->srtt_us = WMA of RTT
     // tp->tp->mdev_us = Variance of WMA of RTT
 
-    mpc_cc_log("main, srtt_us = %u, rs->rtt_us = %lu, mdev_us = %u, sk_pacing_rate = %u\n",
-            tp->srtt_us, rs->rtt_us, tp->mdev_us, sk->sk_pacing_rate);
+    mpc_cc_log("main, srtt_us = %u, rs->rtt_us = %lu, sk_pacing_rate = %u,"
+		    " snd_cwnd = %u, mss = %u\n",
+		    tp->srtt_us, rs->rtt_us, sk->sk_pacing_rate,
+		    tp->snd_cwnd, tp->mss_cache);
 
     if(ctl->md != NULL) {
-        u32 rate;
         u32 rtt_us = rs->rtt_us;
 
         if(ctl->count_down == 0) {
             // Here we're probing. We increase the rate until packet losses are
             // detected
 
-            rate = real_floor(control_gain(ctl->md,
+            ctl->rate = real_floor(control_gain(ctl->md,
                   real_from_frac(rtt_us, USEC_PER_SEC),
                   real_from_int(RATE_GAIN)));
 
@@ -119,13 +133,13 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
                 ctl->probing = true;
             }
         } else {
-            rate = real_floor(control_process(ctl->md,
+            ctl->rate = real_floor(control_process(ctl->md,
                   real_from_frac(rtt_us, USEC_PER_SEC)));
             ctl->count_down -= 1;
         }
-
-        set_rate(sk, rate, rtt_us);
     }
+
+    set_rate(sk);
 }
 
 
