@@ -49,5 +49,14 @@ Let $c_d = 2b_1 \psi$, then
     + \frac{\sbr{\hat{l}(n + 1)}_{r(n) = 0}}{b_1}}
 \end{align*}
 
+To update the model the formula is given as
+
+\begin{align*}
+  N_t &= \sum_i (l(n - i)^2 + r(n - i)^2\\
+  a_i &\leftarrow a_i - \alpha (\hat{l}(n) - r(n)) \frac{l(n - i)}{N_t}\\
+  b_i &\leftarrow b_i - \alpha (\hat{l}(n) - r(n)) \frac{r(n - i)}{N_t}
+\end{align*}
+Note that the paper doesn't include the $N_t$ part, but the internal model does.
+
 \end{document}
 

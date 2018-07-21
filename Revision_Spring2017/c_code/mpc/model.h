@@ -14,7 +14,7 @@ struct model {
     real avg_rtt;
     real avg_rtt_var;
 
-    // bytes/s
+    // MB/s
     real avg_pacing_rate;
 
     // s
@@ -31,12 +31,13 @@ struct model {
     // s
     struct lookback lb_rtt;
 
-    // bytes/s
+    // MB/s
     struct lookback lb_pacing_rate;
 };
 
-void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
-        size_t p, size_t q);
+// psi, xi, gamma, and alpha are percentages.
+void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
+        real_int alpha, size_t p, size_t q);
 
 void model_release(struct model *md);
 

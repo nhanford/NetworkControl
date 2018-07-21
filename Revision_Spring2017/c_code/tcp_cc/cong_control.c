@@ -48,8 +48,7 @@ void mpc_cc_init(struct sock *sk)
     struct control *ctl = inet_csk_ca(sk);
 
     ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-    model_init(ctl->md, real_from_frac(1, 1), real_from_frac(1, 10),
-            real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
+    model_init(ctl->md, 100, 10, 50, 50, 5, 1);
 
     ctl->probing = false;
     ctl->count_down = 0;
@@ -123,9 +122,7 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             // Here we're probing. We increase the rate until packet losses are
             // detected
 
-            ctl->rate = real_floor(control_process(ctl->md,
-                        real_from_frac(rtt_us, USEC_PER_SEC),
-                        real_from_int(RATE_GAIN)));
+            ctl->rate = control_process(ctl->md, rtt_us, RATE_GAIN);
 
             if(ctl->probing && rs->losses > 0) {
                 ctl->probing = false;
@@ -134,9 +131,7 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
                 ctl->probing = true;
             }
         } else {
-            ctl->rate = real_floor(control_process(ctl->md,
-                        real_from_frac(rtt_us, USEC_PER_SEC),
-                        REAL_ZERO));
+            ctl->rate = control_process(ctl->md, rtt_us, 0);
             ctl->count_down -= 1;
         }
     }

@@ -3,14 +3,14 @@
 
 #include "model.h"
 
-void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
-        size_t p, size_t q)
+void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
+        real_int alpha, size_t p, size_t q)
 {
     int i;
 
-    md->psi = psi;
-    md->xi = xi;
-    md->gamma = gamma;
+    md->psi = real_from_frac(psi, 100);
+    md->xi = real_from_frac(xi, 100);
+    md->gamma = real_from_frac(gamma, 100);
 
     md->avg_rtt = REAL_ZERO;
     md->avg_rtt_var = REAL_ZERO;
@@ -21,7 +21,7 @@ void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
     md->p = p;
     md->q = q;
 
-    md->alpha = alpha;
+    md->alpha = real_from_frac(alpha, 100);
     md->a = kmalloc(p*sizeof(real), GFP_KERNEL);
     md->b = kmalloc(q*sizeof(real), GFP_KERNEL);
 

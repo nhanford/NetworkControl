@@ -141,8 +141,7 @@ next_packet:
 
             q->last_srtt = tp->srtt_us;
 
-            q->max_rate = real_floor(control_process(q->md,
-                  real_from_frac(rtt, USEC_PER_SEC), REAL_ZERO));
+            q->max_rate = control_process(q->md, rtt, 0);
         }
 
         mpc_qd_log("deq, skb->len = %d, cb->pkt_len = %d\n",
@@ -213,8 +212,7 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
     q->last_srtt = 0;
 
     q->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-    model_init(q->md, real_from_frac(1, 1), real_from_frac(1, 10),
-        real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
+    model_init(q->md, 100, 10, 50, 50, 5, 1);
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
 

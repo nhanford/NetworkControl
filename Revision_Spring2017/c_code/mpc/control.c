@@ -20,12 +20,18 @@ real control_predict(struct model *md);
 void control_update(struct model *md, real rtt_meas);
 
 
-real control_process(struct model *md, real rtt_meas, real rate_gain)
+real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_gain_bs)
 {
+    // Normalize values for internal use. If we don't do this the values could
+    // overflow.
+    real rtt_meas = real_from_frac(rtt_meas_us, USEC_PER_SEC);
+    real rate_gain = real_from_frac(rate_gain_bs, MB_PER_B);
+    real_int ret_rate;
+
     real b0 = md->b[0];
     real rate_opt = REAL_ZERO;
 
-    mpc_log("rtt_meas = %lluus\n", real_floor(RM(real_from_int(1000000), rtt_meas)));
+    mpc_log("rtt_meas = %lluus\n", rtt_meas_us);
 
     control_update(md, rtt_meas);
 
@@ -56,8 +62,8 @@ real control_process(struct model *md, real rtt_meas, real rate_gain)
 
     // Clamp rate
     // TODO: Make bounds less arbitrary.
-    if(real_lt(rate_opt, real_from_int(100<<17)))
-        rate_opt = real_from_int(100<<17);
+    if(real_lt(rate_opt, real_from_frac(100, 8)))
+        rate_opt = real_from_frac(100, 8);
 
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt = RA(md->predicted_rtt, RM(b0, rate_opt));
@@ -65,9 +71,10 @@ real control_process(struct model *md, real rtt_meas, real rate_gain)
     md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
         RM(md->gamma, md->avg_pacing_rate));
 
-    mpc_log("rate_opt = %llu bytes/s\n", real_floor(rate_opt));
+    ret_rate = real_floor(RM(rate_opt, real_from_int(MB_PER_B)));
+    mpc_log("rate_opt = %llu bytes/s\n", ret_rate);
 
-    return rate_opt;
+    return ret_rate;
 }
 
 
@@ -119,10 +126,11 @@ void control_update(struct model *md, real rtt_meas)
     total_norm = RA(rtt_norm, rate_norm);
 
 
+
     if(real_gt(total_norm, REAL_ZERO)) {
         for(i = 0; i < md->p; i++) {
             real rtt = lookback_index(&md->lb_rtt, i);
-            real delta = RD(RM(md->alpha, RM(error, rtt)), total_norm);
+            real delta = RM(RM(RD(rtt, total_norm), md->alpha), error);
 
             if(add)
                 md->a[i] = RA(md->a[i], delta);
@@ -134,7 +142,7 @@ void control_update(struct model *md, real rtt_meas)
 
         for(i = 0; i < md->q; i++) {
             real rate = lookback_index(&md->lb_pacing_rate, i);
-            real delta = RD(RM(md->alpha, RM(error, rate)), total_norm);
+            real delta = RM(RM(RD(rate, total_norm), md->alpha), error);
 
             if(add)
                 md->b[i] = RA(md->b[i], delta);
