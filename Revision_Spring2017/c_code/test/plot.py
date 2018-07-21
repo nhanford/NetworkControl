@@ -13,7 +13,7 @@ rttVar = []
 rate = []
 retrans = []
 cwnd = []
-bwctlTestDuration = 0
+bwctlStartTime = 0
 
 mpcRTT = []
 mpcRTTTime = []
@@ -32,16 +32,13 @@ parser.add_argument('--limit-perc', type=int,
 args = parser.parse_args()
 
 bwctlFile = args.TEST + '-bwctl.json'
-dmesgFile = args.TEST + '-dmesg.json'
+moduleFile = args.TEST + '-module.json'
 timeFile = args.TEST + '-time.txt'
-
-dmRTT = re.compile('mpc: rtt_meas = ([0-9]+)us')
-dmRate = re.compile('mpc: rate_opt = ([0-9]+) bytes/s')
 
 with open(bwctlFile) as data:
     pdata = json.load(data)
 
-    bwctlTestDuration = pdata['start']['test_start']['duration']
+    bwctlStartTime = pdata['start']['timestamp']['timesecs']
 
     for interval in pdata['intervals']:
         for strm in interval['streams']:
@@ -52,27 +49,19 @@ with open(bwctlFile) as data:
             retrans.append(strm['retransmits'])
             cwnd.append(strm['snd_cwnd'])
 
-# TODO: 0.25 is just to ensure we don't miss some messages, probably should have
-# a more accurate determiner for start time.
-dmesgTimes = open(timeFile).readlines()
-dmesgStart = float(dmesgTimes[0])
-dmesgEnd = float(dmesgTimes[1])
+with open(moduleFile) as data:
+    pdata = json.load(data)
 
-with open(dmesgFile) as data:
-    for line in data:
-        msg = json.loads(line)
+    for entry in pdata:
+        time = entry['time']
+        sinceBWCTL = time - bwctlStartTime
 
-        rttM = dmRTT.match(msg['MESSAGE'])
-        rateM = dmRate.match(msg['MESSAGE'])
-        time = float(msg['__REALTIME_TIMESTAMP'])/1e6
-        sinceBWCTL = time - dmesgEnd + bwctlTestDuration
-
-        if rttM is not None and dmesgStart <= time <= dmesgEnd:
-            mpcRTT.append(int(rttM[1]))
-            mpcRTTTime.append(sinceBWCTL)
-        elif rateM is not None and dmesgStart <= time <= dmesgEnd:
-            mpcRate.append(int(rateM[1]))
-            mpcRateTime.append(sinceBWCTL)
+        if entry['id'] == "rtt_meas_us":
+            mpcRTT.append(entry['value'])
+            mpcRTTTime.append(entry['time'])
+        if entry['id'] == "rate_set":
+            mpcRate.append(entry['value'])
+            mpcRateTime.append(entry['time'])
 
 
 rtt_adj = np.array(rtt)/1000

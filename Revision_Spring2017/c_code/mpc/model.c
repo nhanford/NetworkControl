@@ -32,6 +32,8 @@ void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
 
     lookback_init(&md->lb_rtt, p, REAL_ZERO);
     lookback_init(&md->lb_pacing_rate, q, REAL_ZERO);
+
+    mpc_dfs_init(&md->dstats);
 }
 
 void model_release(struct model *md)
@@ -41,4 +43,6 @@ void model_release(struct model *md)
 
     lookback_release(&md->lb_rtt);
     lookback_release(&md->lb_pacing_rate);
+
+    mpc_dfs_release(&md->dstats);
 }

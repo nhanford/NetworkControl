@@ -33,6 +33,9 @@ struct model {
 
     // MB/s
     struct lookback lb_pacing_rate;
+
+    // For debugging.
+    struct mpc_dfs_stats dstats;
 };
 
 // psi, xi, gamma, and alpha are percentages.

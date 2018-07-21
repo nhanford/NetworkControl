@@ -31,7 +31,8 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
     real b0 = md->b[0];
     real rate_opt = REAL_ZERO;
 
-    mpc_log("rtt_meas = %lluus\n", rtt_meas_us);
+    // debug.
+    md->dstats.rtt_meas_us = rtt_meas_us;
 
     control_update(md, rtt_meas);
 
@@ -72,7 +73,8 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
         RM(md->gamma, md->avg_pacing_rate));
 
     ret_rate = real_floor(RM(rate_opt, real_from_int(MB_PER_B)));
-    mpc_log("rate_opt = %llu bytes/s\n", ret_rate);
+    // debug
+    md->dstats.rate_set = ret_rate;
 
     return ret_rate;
 }
