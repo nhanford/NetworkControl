@@ -11,6 +11,7 @@
  */
 
 #include <linux/module.h>
+#include <asm/fpu/api.h>
 #include <net/tcp.h>
 
 #include "../mpc/control.h"
@@ -48,8 +49,10 @@ void mpc_cc_init(struct sock *sk)
     struct control *ctl = inet_csk_ca(sk);
 
     ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-    model_init(ctl->md, real_from_frac(1, 1), real_from_frac(1, 10),
-            real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
+
+    kernel_fpu_begin();
+    model_init(ctl->md, 1, 0.1, 0.5, 0.5, 5, 1);
+    kernel_fpu_end();
 
     ctl->probing = false;
     ctl->count_down = 0;
@@ -123,9 +126,10 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             // Here we're probing. We increase the rate until packet losses are
             // detected
 
-            ctl->rate = real_floor(control_process(ctl->md,
-                        real_from_frac(rtt_us, USEC_PER_SEC),
-                        real_from_int(RATE_GAIN)));
+            kernel_fpu_begin();
+            ctl->rate = control_process(ctl->md,
+                        ((float) rtt_us) / USEC_PER_SEC, RATE_GAIN);
+            kernel_fpu_end();
 
             if(ctl->probing && rs->losses > 0) {
                 ctl->probing = false;
@@ -134,9 +138,10 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
                 ctl->probing = true;
             }
         } else {
-            ctl->rate = real_floor(control_process(ctl->md,
-                        real_from_frac(rtt_us, USEC_PER_SEC),
-                        REAL_ZERO));
+            kernel_fpu_begin();
+            ctl->rate = control_process(ctl->md,
+                        ((float) rtt_us) / USEC_PER_SEC, 0);
+            kernel_fpu_end();
             ctl->count_down -= 1;
         }
     }

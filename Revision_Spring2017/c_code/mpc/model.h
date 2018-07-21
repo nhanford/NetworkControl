@@ -6,27 +6,27 @@
 
 struct model {
     // These are all floats as defined above.
-    real psi;
-    real xi;
-    real gamma;
+    float psi;
+    float xi;
+    float gamma;
 
     // s
-    real avg_rtt;
-    real avg_rtt_var;
+    float avg_rtt;
+    float avg_rtt_var;
 
     // bytes/s
-    real avg_pacing_rate;
+    float avg_pacing_rate;
 
     // s
-    real predicted_rtt;
+    float predicted_rtt;
 
     size_t p;
     size_t q;
 
     // float
-    real alpha;
-    real *a;
-    real *b;
+    float alpha;
+    float *a;
+    float *b;
 
     // s
     struct lookback lb_rtt;
@@ -35,7 +35,7 @@ struct model {
     struct lookback lb_pacing_rate;
 };
 
-void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
+void model_init(struct model *md, float psi, float xi, float gamma, float alpha,
         size_t p, size_t q);
 
 void model_release(struct model *md);

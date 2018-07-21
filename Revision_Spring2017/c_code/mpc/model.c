@@ -3,7 +3,7 @@
 
 #include "model.h"
 
-void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
+void model_init(struct model *md, float psi, float xi, float gamma, float alpha,
         size_t p, size_t q)
 {
     int i;
@@ -12,26 +12,26 @@ void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
     md->xi = xi;
     md->gamma = gamma;
 
-    md->avg_rtt = REAL_ZERO;
-    md->avg_rtt_var = REAL_ZERO;
-    md->avg_pacing_rate = REAL_ZERO;
+    md->avg_rtt = 0;
+    md->avg_rtt_var = 0;
+    md->avg_pacing_rate = 0;
 
-    md->predicted_rtt = REAL_ZERO;
+    md->predicted_rtt = 0;
 
     md->p = p;
     md->q = q;
 
     md->alpha = alpha;
-    md->a = kmalloc(p*sizeof(real), GFP_KERNEL);
-    md->b = kmalloc(q*sizeof(real), GFP_KERNEL);
+    md->a = kmalloc(p*sizeof(float), GFP_KERNEL);
+    md->b = kmalloc(q*sizeof(float), GFP_KERNEL);
 
     for(i = 0; i < p; i++)
-        md->a[i] = REAL_ZERO;
+        md->a[i] = 0;
     for(i = 0; i < q; i++)
-        md->b[i] = REAL_ZERO;
+        md->b[i] = 0;
 
-    lookback_init(&md->lb_rtt, p, REAL_ZERO);
-    lookback_init(&md->lb_pacing_rate, q, REAL_ZERO);
+    lookback_init(&md->lb_rtt, p, 0);
+    lookback_init(&md->lb_pacing_rate, q, 0);
 }
 
 void model_release(struct model *md)

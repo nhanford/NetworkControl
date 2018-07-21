@@ -17,6 +17,7 @@
 #include <linux/skbuff.h>
 #include <net/pkt_sched.h>
 #include <net/tcp.h>
+#include <asm/fpu/api.h>
 #include <linux/version.h>
 
 #include "../mpc/control.h"
@@ -141,8 +142,10 @@ next_packet:
 
             q->last_srtt = tp->srtt_us;
 
-            q->max_rate = real_floor(control_process(q->md,
-                  real_from_frac(rtt, USEC_PER_SEC), REAL_ZERO));
+            kernel_fpu_begin();
+            q->max_rate = control_process(q->md, ((float) rtt) / USEC_PER_SEC,
+                    0);
+            kernel_fpu_end();
         }
 
         mpc_qd_log("deq, skb->len = %d, cb->pkt_len = %d\n",
@@ -213,8 +216,10 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
     q->last_srtt = 0;
 
     q->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-    model_init(q->md, real_from_frac(1, 1), real_from_frac(1, 10),
-        real_from_frac(1, 2), real_from_frac(1, 2), 5, 1);
+
+    kernel_fpu_begin();
+    model_init(q->md, 1, 0.1, 0.5, 0.5, 5, 1);
+    kernel_fpu_end();
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
 

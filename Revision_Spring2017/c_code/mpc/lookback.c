@@ -4,12 +4,12 @@
 #include "lookback.h"
 
 
-void lookback_init(struct lookback *lb, size_t size, real elem)
+void lookback_init(struct lookback *lb, size_t size, float elem)
 {
     int i;
 
     lb->size = size;
-    lb->elems = kmalloc(size * sizeof(real), GFP_KERNEL);
+    lb->elems = kmalloc(size * sizeof(float), GFP_KERNEL);
     lb->head = 0;
 
     for(i = 0; i < size; i++)
@@ -21,7 +21,7 @@ void lookback_release(struct lookback *lb)
     kfree(lb->elems);
 }
 
-void lookback_add(struct lookback *lb, real elem)
+void lookback_add(struct lookback *lb, float elem)
 {
     lb->head = (lb->head + 1) % lb->size;
     lb->elems[lb->head] = elem;
