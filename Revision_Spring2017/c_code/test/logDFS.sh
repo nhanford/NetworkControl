@@ -20,8 +20,20 @@ while [[ $chkTime -le $endTime ]]
 do
   chkTime=$(date +'%s')
   time=$(date +'%s.%N')
-  newRTT=$(cat $rttFile)
-  newRate=$(cat $rateFile)
+
+  if [[ -e $rttFile ]]
+  then
+    newRTT=$(cat $rttFile)
+  else
+    newRTT=oldRTT
+  fi
+
+  if [[ -e $rateFile ]]
+  then
+    newRate=$(cat $rateFile)
+  else
+    newRate=oldRTT
+  fi
 
   if [[ $oldRTT -ne $newRTT ]]
   then
