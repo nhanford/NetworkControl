@@ -86,6 +86,7 @@ void mpc_cc_avoid(struct sock *sk, u32 ack, u32 acked)
 u32 mpc_cc_undo_cwnd(struct sock *sk)
 {
     struct tcp_sock *tp = tcp_sk(sk);
+    // Should probably not just override this return value.
     u32 ret = tcp_reno_undo_cwnd(sk);
 
     set_rate(sk);
@@ -122,7 +123,7 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             // Here we're probing. We increase the rate until packet losses are
             // detected
 
-            ctl->rate = real_floor(control_gain(ctl->md,
+            ctl->rate = real_floor(control_process(ctl->md,
                         real_from_frac(rtt_us, USEC_PER_SEC),
                         real_from_int(RATE_GAIN)));
 
@@ -134,7 +135,8 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             }
         } else {
             ctl->rate = real_floor(control_process(ctl->md,
-                        real_from_frac(rtt_us, USEC_PER_SEC)));
+                        real_from_frac(rtt_us, USEC_PER_SEC),
+                        REAL_ZERO));
             ctl->count_down -= 1;
         }
     }

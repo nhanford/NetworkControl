@@ -6,6 +6,8 @@
 void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
         size_t p, size_t q)
 {
+    int i;
+
     md->psi = psi;
     md->xi = xi;
     md->gamma = gamma;
@@ -22,6 +24,11 @@ void model_init(struct model *md, real psi, real xi, real gamma, real alpha,
     md->alpha = alpha;
     md->a = kmalloc(p*sizeof(real), GFP_KERNEL);
     md->b = kmalloc(q*sizeof(real), GFP_KERNEL);
+
+    for(i = 0; i < p; i++)
+        md->a[i] = REAL_ZERO;
+    for(i = 0; i < q; i++)
+        md->b[i] = REAL_ZERO;
 
     lookback_init(&md->lb_rtt, p, REAL_ZERO);
     lookback_init(&md->lb_pacing_rate, q, REAL_ZERO);

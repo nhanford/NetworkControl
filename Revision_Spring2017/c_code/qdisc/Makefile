@@ -24,3 +24,8 @@ start:
 stop:
 	tc qdisc del dev $(QDEV) root mpc
 	rmmod mpcqd.ko
+
+restart:
+	make stop QDEV=$(QDEV)
+	make -B
+	make start QDEV=$(QDEV)

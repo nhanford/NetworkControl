@@ -22,3 +22,8 @@ stop:
 	sysctl -w net.ipv4.tcp_congestion_control=cubic
 	tc qdisc del dev $(QDEV) root
 	rmmod mpc_cc
+
+restart:
+	make stop QDEV=$(QDEV)
+	make -B
+	make start QDEV=$(QDEV)

@@ -5,9 +5,9 @@
 #define CONTROL_H
 
 // Update model and return the next pacing rate.
-real control_process(struct model *md, real rtt_meas);
-
-// Increase the rate by a certain amount, updates model.
-real control_gain(struct model *md, real rtt_meas, real rate_gain);
+//
+// If rate_gain is not 0, then forgo the normal MPC model and simply increment
+// the rate by that amount. This is useful for implementing probing.
+real control_process(struct model *md, real rtt_meas, real rate_gain);
 
 #endif /* end of include guard: CONTROL_H */

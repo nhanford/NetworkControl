@@ -15,23 +15,15 @@ inline real square_diff_real(real x, real y)
     return RM(diff, diff);
 }
 
-// Make a real at least 1 in its least place.
-inline real atl1(real x)
-{
-  if(real_lt(x, (real) { 1 }))
-    return (real) { 1 };
-  else
-    return x;
-}
-
 
 real control_predict(struct model *md);
 void control_update(struct model *md, real rtt_meas);
 
 
-real control_process(struct model *md, real rtt_meas)
+real control_process(struct model *md, real rtt_meas, real rate_gain)
 {
-    real psi, xi, b0, rate_opt;
+    real b0 = md->b[0];
+    real rate_opt = REAL_ZERO;
 
     mpc_log("rtt_meas = %lluus\n", real_floor(RM(real_from_int(1000000), rtt_meas)));
 
@@ -45,63 +37,30 @@ real control_process(struct model *md, real rtt_meas)
               square_diff_real(md->predicted_rtt, md->avg_rtt)),
             RM(md->gamma, md->avg_rtt_var));
 
-
     md->predicted_rtt = control_predict(md);
 
 
-    psi = RD(md->psi, atl1(md->avg_rtt_var));
-    xi = RD(md->xi, atl1(md->avg_pacing_rate));
-    b0 = atl1(md->b[0]);
-
-    // Tricky dealing with percetage.
-    // The extra 2*'s are there to avoid 1/(psi*b0) potentially going to 0.5.
-    rate_opt = RD(RA(RM(
-            RS(xi, RD(b0, atl1(md->avg_rtt))),
-            RD(REAL_ONE, RM(RM(real_from_int(1), atl1(psi)), b0))),
-        RS(md->avg_rtt, md->predicted_rtt)), b0);
+    if(real_gt(rate_gain, REAL_ZERO)) {
+        rate_opt = RA(lookback_index(&md->lb_pacing_rate, 0), rate_gain);
+    } else if(real_gt(md->avg_rtt, REAL_ZERO)
+            && real_gt(md->avg_rtt_var, REAL_ZERO)
+            && real_gt(md->avg_pacing_rate, REAL_ZERO)
+            && real_gt(b0, REAL_ZERO)) {
+        real cd = RM(real_ls(b0, 1), md->psi);
+        real t1 = RD(RM(md->avg_rtt_var, md->xi), RM(RM(cd, b0), md->avg_pacing_rate));
+        real t2 = RD(md->avg_rtt, b0);
+        real t3 = RD(md->avg_rtt_var, RM(cd, md->avg_rtt));
+        real t4 = RD(md->predicted_rtt, b0);
+        rate_opt = RS(RA(t1, t2), RA(t3, t4));
+    }
 
     // Clamp rate
     // TODO: Make bounds less arbitrary.
-    if(real_lt(rate_opt, real_from_int((100<<20)>>3)))
-        rate_opt = real_from_int((100<<20)>>3);
+    if(real_lt(rate_opt, real_from_int(100<<17)))
+        rate_opt = real_from_int(100<<17);
 
     lookback_add(&md->lb_pacing_rate, rate_opt);
     md->predicted_rtt = RA(md->predicted_rtt, RM(b0, rate_opt));
-
-    md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
-        RM(md->gamma, md->avg_pacing_rate));
-
-    mpc_log("rate_opt = %llu bytes/s\n", real_floor(rate_opt));
-
-    return rate_opt;
-}
-
-
-real control_gain(struct model *md, real rtt_meas, real rate_gain)
-{
-    real rate_opt;
-
-    mpc_log("rtt_meas = %lluus\n", real_floor(RM(real_from_int(1000000), rtt_meas)));
-
-    control_update(md, rtt_meas);
-
-    md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
-        RM(md->gamma, md->avg_rtt) );
-
-    md->avg_rtt_var =
-        RA( RM(RS(REAL_ONE, md->gamma),
-              square_diff_real(md->predicted_rtt, md->avg_rtt)),
-            RM(md->gamma, md->avg_rtt_var));
-
-
-    md->predicted_rtt = control_predict(md);
-
-
-    rate_opt = RA(lookback_index(&md->lb_pacing_rate, 0), rate_gain);
-
-
-    lookback_add(&md->lb_pacing_rate, rate_opt);
-    md->predicted_rtt = rate_opt;
 
     md->avg_pacing_rate = RA(RM(RS(REAL_ONE, md->gamma), rate_opt),
         RM(md->gamma, md->avg_pacing_rate));
@@ -166,9 +125,11 @@ void control_update(struct model *md, real rtt_meas)
             real delta = RD(RM(md->alpha, RM(error, rtt)), total_norm);
 
             if(add)
-              md->a[i] = RA(md->a[i], delta);
+                md->a[i] = RA(md->a[i], delta);
+            else if(real_gt(md->a[i], delta))
+                md->a[i] = RS(md->a[i], delta);
             else
-              md->a[i] = RS(md->a[i], delta);
+                md->a[i] = REAL_ZERO;
         }
 
         for(i = 0; i < md->q; i++) {
@@ -177,8 +138,10 @@ void control_update(struct model *md, real rtt_meas)
 
             if(add)
                 md->b[i] = RA(md->b[i], delta);
-            else
+            else if(real_gt(md->b[i], delta))
                 md->b[i] = RS(md->b[i], delta);
+            else
+                md->b[i] = REAL_ZERO;
         }
     }
 

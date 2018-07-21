@@ -92,10 +92,10 @@ static struct sk_buff* mpc_dequeue(struct Qdisc *sch)
 
         // For diagnostics, ideally these values should be small.
         if(over > 0)
-            mpc_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
+            mpc_qd_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
         else {
             over = -over;
-            mpc_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
+            mpc_qd_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
         }
 
         // Only send out a packet if doing so doesn't go over the maximum
@@ -142,14 +142,14 @@ next_packet:
             q->last_srtt = tp->srtt_us;
 
             q->max_rate = real_floor(control_process(q->md,
-                  real_from_frac(rtt, USEC_PER_SEC)));
+                  real_from_frac(rtt, USEC_PER_SEC), REAL_ZERO));
         }
 
-        mpc_log("deq, skb->len = %d, cb->pkt_len = %d\n",
+        mpc_qd_log("deq, skb->len = %d, cb->pkt_len = %d\n",
                 skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
 exit_dequeue:
-    mpc_log("next_tts = %lld.%lld\n", next_tts/NSEC_PER_SEC, next_tts%NSEC_PER_SEC);
+    mpc_qd_log("next_tts = %lld.%lld\n", next_tts/NSEC_PER_SEC, next_tts%NSEC_PER_SEC);
     if(next_tts > 0)
         qdisc_watchdog_schedule_ns(&q->watchdog, next_tts);
     else
