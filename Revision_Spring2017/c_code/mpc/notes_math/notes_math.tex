@@ -1,0 +1,53 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{calc}
+\usepackage{color}
+\usepackage{commath}
+%\usepackage{enumitem}
+%\usepackage[c]{esvect}
+%\usepackage{etoolbox}
+%\usepackage{float}
+%\usepackage{graphicx}
+\usepackage{lastpage}
+%\usepackage{listings}
+\usepackage{mathtools}
+%\usepackage{siunitx}
+%\usepackage{tikz}
+
+
+% For multipage align*
+\allowdisplaybreaks
+
+\title{Notes on MPC Math in Kernel Module}
+\author{Taran Lynn}
+%\date{}
+
+\begin{document}
+\maketitle
+
+This document contains transformations to make the MPC equation more manageable
+in code.
+
+\begin{align*}
+    r(n) &= \frac{\del{\frac{\xi}{\mu_r(n - 1)} - \frac{b_1}{\mu_l(n)}} \frac{\mu_v(n)}{2\psi b_1}
+    + \mu_l(n) - \sbr{\hat{l}(n + 1)}_{r(n) = 0}}{b_1}\\
+    %
+    &= \frac{\mu_v(n) \xi}{2b_1^2 \mu_r(n - 1) \psi} - \frac{\mu_v(n)}{2b_1 \mu_l(n) \psi}
+    + \frac{\mu_l(n)}{b_1} - \frac{\sbr{\hat{l}(n + 1)}_{r(n) = 0}}{b_1}\\
+    %
+    &= \frac{\mu_v(n) \xi}{2b_1^2 \mu_r(n - 1) \psi}
+    + \frac{\mu_l(n)}{b_1} - \del{\frac{\mu_v(n)}{2b_1 \mu_l(n) \psi}
+    + \frac{\sbr{\hat{l}(n + 1)}_{r(n) = 0}}{b_1}}
+\end{align*}
+
+Let $c_d = 2b_1 \psi$, then
+
+\begin{align*}
+    r(n) &= \frac{\mu_v(n) \xi}{b_1 \mu_r(n - 1) c_d}
+    + \frac{\mu_l(n)}{b_1} - \del{\frac{\mu_v(n)}{\mu_l(n) c_d}
+    + \frac{\sbr{\hat{l}(n + 1)}_{r(n) = 0}}{b_1}}
+\end{align*}
+
+\end{document}
+
