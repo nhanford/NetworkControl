@@ -16,9 +16,8 @@ cwnd = []
 bwctlStartTime = 0
 
 mpcRTT = []
-mpcRTTTime = []
 mpcRate = []
-mpcRateTime = []
+mpcTime = []
 
 parser = argparse.ArgumentParser(description="Plots test results.")
 parser.add_argument('TEST', type=str,
@@ -53,15 +52,16 @@ with open(moduleFile) as data:
     pdata = json.load(data)
 
     for entry in pdata:
+        if entry == {}:
+            continue
+
         time = entry['time']
         sinceBWCTL = time - bwctlStartTime
 
-        if entry['id'] == "rtt_meas_us":
-            mpcRTT.append(entry['value'])
-            mpcRTTTime.append(entry['time'])
-        if entry['id'] == "rate_set":
-            mpcRate.append(entry['value'])
-            mpcRateTime.append(entry['time'])
+        mpcRTT.append(entry['rtt_meas_us'])
+        mpcRate.append(entry['rate_set'])
+
+        mpcTime.append(sinceBWCTL)
 
 
 rtt_adj = np.array(rtt)/1000
@@ -102,11 +102,11 @@ ax5.plot(startTime, cwnd_adj, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window (kbytes)')
 
-ax6.plot(mpcRTTTime, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
+ax6.plot(mpcTime, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
 ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('MPC RTT (ms)')
 
-ax7.plot(mpcRateTime, mpcRate_adj, 'b', label = 'MPC Set Rate')
+ax7.plot(mpcTime, mpcRate_adj, 'b', label = 'MPC Set Rate')
 ax7.set_ylabel('MPC Rate (mbit/s)')
 
 if args.limit_perc is not None:
