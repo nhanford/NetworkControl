@@ -15,7 +15,7 @@ parser.add_argument('--title', type=str,
         help="Sets title for figure.")
 parser.add_argument('--output', type=str,
         help="Sets output file.")
-parser.add_argument('--limit-perc', type=int,
+parser.add_argument('--limit-perc', type=float,
         help="Limits output range to within double of a certain percentile.")
 args = parser.parse_args()
 
@@ -61,12 +61,10 @@ ax1.plot(bwctlData.start, rtt_adj, 'r-', label = 'rtt')
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('RTT (ms)')
 
-ax2.set_ylim(-1, max(rtt_adj))
 ax2.plot(bwctlData.start, rttVar_adj, 'g', label = 'rtt variance')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('RTT variance (ms)')
 
-ax3.set_ylim(-10, 2*np.percentile(rate_adj, 99))
 ax3.plot(bwctlData.start, rate_adj, 'b', label = 'rate')
 ax3.set_xlabel('Time (s)')
 ax3.set_ylabel('Rate (mbit/s)')
@@ -86,13 +84,13 @@ ax7.plot(modData.time, mpcRate_adj, 'b', label = 'MPC Set Rate')
 ax7.set_ylabel('MPC Rate (mbit/s)')
 
 if args.limit_perc is not None:
-    ax1.set_ylim(0, np.percentile(rtt_adj, args.limit_perc)*2)
-    ax2.set_ylim(0, np.percentile(rttVar_adj, args.limit_perc)*2)
-    ax3.set_ylim(0, np.percentile(rate_adj, args.limit_perc)*2)
-    ax4.set_ylim(0, np.percentile(bwctlData.retransmits, args.limit_perc)*2)
-    ax5.set_ylim(0, np.percentile(cwnd_adj, args.limit_perc)*2)
-    ax6.set_ylim(0, np.percentile(mpcRTT_adj, args.limit_perc)*2)
-    ax7.set_ylim(0, np.percentile(mpcRate_adj, args.limit_perc)*2)
+    ax1.set_ylim(0, rtt_adj.quantile(args.limit_perc)*2)
+    ax2.set_ylim(0, rttVar_adj.quantile(args.limit_perc)*2)
+    ax3.set_ylim(0, rate_adj.quantile(args.limit_perc)*2)
+    ax4.set_ylim(0, bwctlData.retransmits.quantile(args.limit_perc)*2)
+    ax5.set_ylim(0, cwnd_adj.quantile(args.limit_perc)*2)
+    ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_perc)*2)
+    ax7.set_ylim(0, mpcRate_adj.quantile(args.limit_perc)*2)
 
 fig.legend()
 
