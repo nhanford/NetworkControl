@@ -25,14 +25,14 @@ do
   then
     newRTT=$(cat $rttFile)
   else
-    newRTT=oldRTT
+    newRTT=$oldRTT
   fi
 
   if [[ -e $rateFile ]]
   then
     newRate=$(cat $rateFile)
   else
-    newRate=oldRTT
+    newRate=$oldRate
   fi
 
   if [[ $oldRTT -ne $newRTT ]]
@@ -50,4 +50,4 @@ do
   sleep 0.1
 done
 
-echo "{\"id\":\"summary\",\"time\":$time}]" >> $outputFile
+echo "{\"id\":\"summary\"}]" >> $outputFile
