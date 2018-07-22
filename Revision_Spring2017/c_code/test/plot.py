@@ -2,22 +2,11 @@
 
 import argparse
 import json
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import re
+import pandas as pd
 
-startTime = []
-rtt = []
-rttVar = []
-rate = []
-retrans = []
-cwnd = []
 bwctlStartTime = 0
-
-mpcRTT = []
-mpcRate = []
-mpcTime = []
 
 parser = argparse.ArgumentParser(description="Plots test results.")
 parser.add_argument('TEST', type=str,
@@ -36,41 +25,28 @@ timeFile = args.TEST + '-time.txt'
 
 with open(bwctlFile) as data:
     pdata = json.load(data)
-
     bwctlStartTime = pdata['start']['timestamp']['timesecs']
-
-    for interval in pdata['intervals']:
-        for strm in interval['streams']:
-            startTime.append(strm['start'])
-            rtt.append(strm['rtt'])
-            rttVar.append(strm['rttvar'])
-            rate.append(strm['bits_per_second'])
-            retrans.append(strm['retransmits'])
-            cwnd.append(strm['snd_cwnd'])
+    strms = list(map(lambda i: i['streams'], pdata['intervals']))
+    strms = [x for y in strms for x in y] # Flatten
+    bwctlData = pd.DataFrame(strms)
 
 with open(moduleFile) as data:
     pdata = json.load(data)
 
-    for entry in pdata:
-        if entry == {}:
-            continue
+    # columns is for when there are no entries.
+    modData = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
+            columns = ["time", "rtt_meas_us", "rate_set"])
 
-        time = entry['time']
-        sinceBWCTL = time - bwctlStartTime
-
-        mpcRTT.append(entry['rtt_meas_us'])
-        mpcRate.append(entry['rate_set'])
-
-        mpcTime.append(sinceBWCTL)
+    modData.time -= bwctlStartTime
 
 
-rtt_adj = np.array(rtt)/1000
-rttVar_adj = np.array(rttVar)/1000
-rate_adj = list([r/(1<<20) for r in rate])
-cwnd_adj = list([w/(1<<10) for w in cwnd])
+rtt_adj = bwctlData.rtt/1000
+rttVar_adj = bwctlData.rttvar/1000
+rate_adj = bwctlData.bits_per_second/(1<<20)
+cwnd_adj = bwctlData.snd_cwnd/(1<<10)
 
-mpcRTT_adj = list(map(lambda x: x/1000, mpcRTT))
-mpcRate_adj = list(map(lambda x: x >> (20 - 3), mpcRate))
+mpcRTT_adj = modData.rtt_meas_us/1000
+mpcRate_adj = 8*modData.rate_set/(1 << 20)
 
 fig, ax = plt.subplots(2, 2, figsize=(10, 10))
 ax1 = ax[0][0]
@@ -81,40 +57,40 @@ ax5 = ax[1][0]
 ax6 = ax[1][1]
 ax7 = ax6.twinx()
 
-ax1.plot(startTime, rtt_adj, 'r-', label = 'rtt')
+ax1.plot(bwctlData.start, rtt_adj, 'r-', label = 'rtt')
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('RTT (ms)')
 
 ax2.set_ylim(-1, max(rtt_adj))
-ax2.plot(startTime, rttVar_adj, 'g', label = 'rtt variance')
+ax2.plot(bwctlData.start, rttVar_adj, 'g', label = 'rtt variance')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('RTT variance (ms)')
 
 ax3.set_ylim(-10, 2*np.percentile(rate_adj, 99))
-ax3.plot(startTime, rate_adj, 'b', label = 'rate')
+ax3.plot(bwctlData.start, rate_adj, 'b', label = 'rate')
 ax3.set_xlabel('Time (s)')
 ax3.set_ylabel('Rate (mbit/s)')
 
-ax4.plot(startTime, retrans, 'y', label = 'Retransmits')
+ax4.plot(bwctlData.start, bwctlData.retransmits, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
 
-ax5.plot(startTime, cwnd_adj, 'c', label = 'Congestion Window')
+ax5.plot(bwctlData.start, cwnd_adj, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window (kbytes)')
 
-ax6.plot(mpcTime, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
+ax6.plot(modData.time, mpcRTT_adj, 'r', label = 'MPC Observed RTT')
 ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('MPC RTT (ms)')
 
-ax7.plot(mpcTime, mpcRate_adj, 'b', label = 'MPC Set Rate')
+ax7.plot(modData.time, mpcRate_adj, 'b', label = 'MPC Set Rate')
 ax7.set_ylabel('MPC Rate (mbit/s)')
 
 if args.limit_perc is not None:
     ax1.set_ylim(0, np.percentile(rtt_adj, args.limit_perc)*2)
     ax2.set_ylim(0, np.percentile(rttVar_adj, args.limit_perc)*2)
     ax3.set_ylim(0, np.percentile(rate_adj, args.limit_perc)*2)
-    ax4.set_ylim(0, np.percentile(retrans, args.limit_perc)*2)
-    ax5.set_ylim(0, np.percentile(cwnd, args.limit_perc)*2)
+    ax4.set_ylim(0, np.percentile(bwctlData.retransmits, args.limit_perc)*2)
+    ax5.set_ylim(0, np.percentile(cwnd_adj, args.limit_perc)*2)
     ax6.set_ylim(0, np.percentile(mpcRTT_adj, args.limit_perc)*2)
     ax7.set_ylim(0, np.percentile(mpcRate_adj, args.limit_perc)*2)
 
