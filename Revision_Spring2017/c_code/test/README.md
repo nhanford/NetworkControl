@@ -14,7 +14,10 @@ servers](https://fasterdata.es.net/performance-testing/perfsonar/esnet-perfsonar
 
 To plot the data from a test run
 ```
-> python plot.py TEST [--title TITLE] [--output FILE]
+> python plot.py TEST [ --title TITLE ] [ --output FILE ]
+    [ --limit-quantile QUANT ]
 ```
 
-Note that the times from BWCTL and the kernel modules don't line up.
+Note that the times from BWCTL and the kernel modules don't line up. if
+`limit-quantile` is set, then the plot makes the upper limit **double** that
+quantile.

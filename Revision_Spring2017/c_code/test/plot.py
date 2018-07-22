@@ -15,8 +15,8 @@ parser.add_argument('--title', type=str,
         help="Sets title for figure.")
 parser.add_argument('--output', type=str,
         help="Sets output file.")
-parser.add_argument('--limit-perc', type=float,
-        help="Limits output range to within double of a certain percentile.")
+parser.add_argument('--limit-quantile', type=float,
+        help="Limits output range to within double of a certain quantile.")
 args = parser.parse_args()
 
 bwctlFile = args.TEST + '-bwctl.json'
@@ -83,14 +83,14 @@ ax6.set_ylabel('MPC RTT (ms)')
 ax7.plot(modData.time, mpcRate_adj, 'b', label = 'MPC Set Rate')
 ax7.set_ylabel('MPC Rate (mbit/s)')
 
-if args.limit_perc is not None:
-    ax1.set_ylim(0, rtt_adj.quantile(args.limit_perc)*2)
-    ax2.set_ylim(0, rttVar_adj.quantile(args.limit_perc)*2)
-    ax3.set_ylim(0, rate_adj.quantile(args.limit_perc)*2)
-    ax4.set_ylim(0, bwctlData.retransmits.quantile(args.limit_perc)*2)
-    ax5.set_ylim(0, cwnd_adj.quantile(args.limit_perc)*2)
-    ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_perc)*2)
-    ax7.set_ylim(0, mpcRate_adj.quantile(args.limit_perc)*2)
+if args.limit_quantile is not None:
+    ax1.set_ylim(0, rtt_adj.quantile(args.limit_quantile)*2)
+    ax2.set_ylim(0, rttVar_adj.quantile(args.limit_quantile)*2)
+    ax3.set_ylim(0, rate_adj.quantile(args.limit_quantile)*2)
+    ax4.set_ylim(0, bwctlData.retransmits.quantile(args.limit_quantile)*2)
+    ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
+    ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
+    ax7.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
 
 fig.legend()
 
