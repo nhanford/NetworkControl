@@ -11,8 +11,6 @@ rateFile="/sys/kernel/debug/mpc/rate_set"
 
 chkTime=$(date +'%s')
 endTime=$(($chkTime + $duration))
-oldRTT=0
-oldRate=0
 
 echo '[' > $outputFile
 
@@ -23,31 +21,21 @@ do
 
   if [[ -e $rttFile ]]
   then
-    newRTT=$(cat $rttFile)
+    rtt=$(cat $rttFile)
   else
-    newRTT=$oldRTT
+    rtt=0
   fi
 
   if [[ -e $rateFile ]]
   then
-    newRate=$(cat $rateFile)
+    rate=$(cat $rateFile)
   else
-    newRate=$oldRate
+    rate=0
   fi
 
-  if [[ $oldRTT -ne $newRTT ]]
-  then
-    echo "{\"id\":\"rtt_meas_us\",\"time\":$time,\"value\":$newRTT}," >> $outputFile
-    oldRTT=$newRTT
-  fi
-
-  if [[ $oldRate -ne $newRate ]]
-  then
-    echo "{\"id\":\"rate_set\",\"time\":$time,\"value\":$newRate}," >> $outputFile
-    oldRate=$newRate
-  fi
+  echo "{\"time\":$time,\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
 
   sleep 0.1
 done
 
-echo "{\"id\":\"summary\"}]" >> $outputFile
+echo "{}]" >> $outputFile
