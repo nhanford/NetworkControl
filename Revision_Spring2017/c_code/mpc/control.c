@@ -29,24 +29,29 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
     real_int ret_rate;
 
     real b0 = md->b[0];
-    real rate_opt = REAL_ZERO;
+    real rate_opt = lookback_index(&md->lb_pacing_rate, 0);
 
     // debug.
     md->dstats.rtt_meas_us = rtt_meas_us;
 
+    mpc_log("control_update\n");
     control_update(md, rtt_meas);
 
+    mpc_log("avg_rtt\n");
     md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
         RM(md->gamma, md->avg_rtt) );
 
+    mpc_log("avg_rtt_var\n");
     md->avg_rtt_var =
         RA( RM(RS(REAL_ONE, md->gamma),
               square_diff_real(md->predicted_rtt, md->avg_rtt)),
             RM(md->gamma, md->avg_rtt_var));
 
+    mpc_log("predicted_rtt\n");
     md->predicted_rtt = control_predict(md);
 
 
+    mpc_log("rate_opt\n");
     if(real_gt(rate_gain, REAL_ZERO)) {
         rate_opt = RA(lookback_index(&md->lb_pacing_rate, 0), rate_gain);
     } else if(real_gt(md->avg_rtt, REAL_ZERO)
@@ -58,7 +63,11 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
         real t2 = RD(md->avg_rtt, b0);
         real t3 = RD(md->avg_rtt_var, RM(cd, md->avg_rtt));
         real t4 = RD(md->predicted_rtt, b0);
-        rate_opt = RS(RA(t1, t2), RA(t3, t4));
+        real t5 = RA(t1, t2);
+        real t6 = RA(t3, t4);
+
+        if(real_gt(t5, t6))
+          rate_opt = RS(t5, t6);
     }
 
     // Clamp rate

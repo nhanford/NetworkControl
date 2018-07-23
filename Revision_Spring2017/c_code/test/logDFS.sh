@@ -19,11 +19,24 @@ while [[ $chkTime -le $endTime ]]
 do
   chkTime=$(date +'%s')
   time=$(date +'%s.%N')
+  rec=true
 
-  if [[ -e $mpcDFS ]]
+  rtt=$(cat $rttFile 2> /dev/null)
+
+  if [[ $? -ne 0 ]]
   then
-    rtt=$(cat $rttFile)
-    rate=$(cat $rateFile)
+    rec=false
+  fi
+
+  rate=$(cat $rateFile 2> /dev/null)
+
+  if [[ $? -ne 0 ]]
+  then
+    rec=false
+  fi
+
+  if $rec
+  then
     echo "{\"time\":$time,\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
   fi
 
