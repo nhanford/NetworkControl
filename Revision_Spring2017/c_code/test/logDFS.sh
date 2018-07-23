@@ -6,8 +6,9 @@
 
 outputFile=$1
 duration=$2
-rttFile="/sys/kernel/debug/mpc/rtt_meas_us"
-rateFile="/sys/kernel/debug/mpc/rate_set"
+mpcDFS="/sys/kernel/debug/mpc"
+rttFile="$mpcDFS/rtt_meas_us"
+rateFile="$mpcDFS/rate_set"
 
 chkTime=$(date +'%s')
 endTime=$(($chkTime + $duration))
@@ -19,21 +20,12 @@ do
   chkTime=$(date +'%s')
   time=$(date +'%s.%N')
 
-  if [[ -e $rttFile ]]
+  if [[ -e $mpcDFS ]]
   then
     rtt=$(cat $rttFile)
-  else
-    rtt=0
-  fi
-
-  if [[ -e $rateFile ]]
-  then
     rate=$(cat $rateFile)
-  else
-    rate=0
+    echo "{\"time\":$time,\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
   fi
-
-  echo "{\"time\":$time,\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
 
   sleep 0.1
 done
