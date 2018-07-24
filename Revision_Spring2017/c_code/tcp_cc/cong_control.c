@@ -15,7 +15,8 @@
 
 #include "../mpc/control.h"
 
-#define RATE_GAIN (100 << 20)
+#define RATE_GAIN (10 << 20)
+#define RATE_MAX 4294967295
 #define PROBING_PERIOD 100
 #define mpc_cc_log(args, ...) printk(KERN_INFO "mpc cc: " args, ##__VA_ARGS__)
 
@@ -124,7 +125,9 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
             // Here we're probing. We increase the rate until packet losses are
             // detected
 
-            ctl->rate += RATE_GAIN;
+            if(ctl->rate < RATE_MAX - RATE_GAIN)
+                ctl->rate += RATE_GAIN;
+
             control_process(ctl->md, rtt_us, ctl->rate);
 
             if(ctl->probing && rs->losses > 0) {
