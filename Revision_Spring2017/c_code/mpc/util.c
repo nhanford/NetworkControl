@@ -3,7 +3,18 @@
 
 void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 {
-    dstats->root = debugfs_create_dir(MPC_DFS_DIR, NULL);
+    // We need to create a unique name for each DFS since multiple instances may
+    // be running.
+    char uniq_name[32];
+
+    sprintf(uniq_name, "%p", dstats);
+
+    dstats->root = debugfs_lookup(MPC_DFS_DIR, NULL);
+
+    if(dstats->root == NULL)
+        dstats->root = debugfs_create_dir(MPC_DFS_DIR, NULL);
+
+    dstats->root = debugfs_create_dir(uniq_name, dstats->root);
 
     if(dstats->root == NULL) {
         mpc_log("Failed to create dfs\n");
