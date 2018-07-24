@@ -50,7 +50,7 @@ class Data(object):
 
             # columns is for when there are no entries.
             self.module = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
-                    columns = ["time", "rtt_meas_us", "rate_set"])
+                    columns = ["time", "id", "rtt_meas_us", "rate_set"])
 
             # Normalize times to be the same as those from BWCtl.
             self.module.time -= bwctlStartTime

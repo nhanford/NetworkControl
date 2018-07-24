@@ -16,3 +16,6 @@ print(data.stream[['bits_per_second', 'rtt', 'rttvar', 'retransmits', 'snd_cwnd'
 
 print("\nFor Kernel Module")
 print(data.module[['rtt_meas_us', 'rate_set']].describe())
+
+print("MPC ids found")
+print(data.module.id.unique())
