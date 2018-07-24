@@ -17,8 +17,8 @@
 
 struct mpc_dfs_stats {
     struct dentry *root;
-    u32 rtt_meas_us;
-    u32 rate_set;
+    u64 rtt_meas_us;
+    u64 rate_set;
 };
 
 void mpc_dfs_init(struct mpc_dfs_stats *dstats);

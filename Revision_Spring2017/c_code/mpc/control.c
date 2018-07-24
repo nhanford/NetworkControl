@@ -20,12 +20,12 @@ real control_predict(struct model *md);
 void control_update(struct model *md, real rtt_meas);
 
 
-real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_gain_bs)
+real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_bs)
 {
     // Normalize values for internal use. If we don't do this the values could
     // overflow.
     real rtt_meas = real_from_frac(rtt_meas_us, USEC_PER_SEC);
-    real rate_gain = real_from_frac(rate_gain_bs, MB_PER_B);
+    real set_rate = real_from_frac(rate_bs, MB_PER_B);
     real_int ret_rate;
 
     real b0 = md->b[0];
@@ -52,8 +52,9 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
 
 
     mpc_log("rate_opt\n");
-    if(real_gt(rate_gain, REAL_ZERO)) {
-        rate_opt = RA(lookback_index(&md->lb_pacing_rate, 0), rate_gain);
+    if(real_gt(set_rate, REAL_ZERO)) {
+        mpc_log("Probe, rate = %llu\n", rate_bs);
+        rate_opt = set_rate;
     } else if(real_gt(md->avg_rtt, REAL_ZERO)
             && real_gt(md->avg_rtt_var, REAL_ZERO)
             && real_gt(md->avg_pacing_rate, REAL_ZERO)
@@ -84,6 +85,7 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_g
     ret_rate = real_floor(RM(rate_opt, real_from_int(MB_PER_B)));
     // debug
     md->dstats.rate_set = ret_rate;
+    mpc_log("md->dstats.rate_set = %llu\n", md->dstats.rate_set);
 
     return ret_rate;
 }

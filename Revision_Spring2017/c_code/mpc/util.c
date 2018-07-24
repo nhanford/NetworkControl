@@ -8,8 +8,8 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
     if(dstats->root == NULL) {
         mpc_log("Failed to create dfs\n");
     } else {
-        debugfs_create_u32("rtt_meas_us", 0644, dstats->root, &dstats->rtt_meas_us);
-        debugfs_create_u32("rate_set", 0644, dstats->root, &dstats->rate_set);
+        debugfs_create_u64("rtt_meas_us", 0644, dstats->root, &dstats->rtt_meas_us);
+        debugfs_create_u64("rate_set", 0644, dstats->root, &dstats->rate_set);
         mpc_log("Created dfs\n");
     }
 }
