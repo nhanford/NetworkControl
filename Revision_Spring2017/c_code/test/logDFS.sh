@@ -29,7 +29,7 @@ do
 
     if [[ -n $rtt && -n $rate ]]
     then
-      echo "{\"time\":$time,\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
+      echo "{\"time\":$time,\"id\":\"${dir##*/}\",\"rtt_meas_us\":$rtt,\"rate_set\":$rate}," >> $outputFile
     fi
   done
 
