@@ -1,8 +1,21 @@
 
+#include <linux/debugfs.h>
+
 #include "lookback.h"
 
 #ifndef MODEL_H
 #define MODEL_H
+
+#define MPC_DFS_DIR "mpc"
+
+
+struct mpc_dfs_stats {
+    struct dentry *root;
+
+    int id;
+    u64 rtt_meas_us;
+    u64 rate_set;
+};
 
 struct model {
     // These are all floats as defined above.

@@ -1,7 +1,46 @@
 
+#include <linux/limits.h>
 #include <linux/slab.h>
 
 #include "model.h"
+
+
+static unsigned long long dfs_id = 0;
+
+
+void mpc_dfs_init(struct mpc_dfs_stats *dstats)
+{
+    // We need to create a unique name for each DFS since multiple instances may
+    // be running.
+    char uniq_name[32];
+
+    dstats->rtt_meas_us = 0;
+    dstats->rate_set = 0;
+
+    sprintf(uniq_name, "%lld", dfs_id);
+
+    dstats->root = debugfs_lookup(MPC_DFS_DIR, NULL);
+
+    if(dstats->root == NULL)
+        dstats->root = debugfs_create_dir(MPC_DFS_DIR, NULL);
+
+    if(dstats->root != NULL)
+        dstats->root = debugfs_create_dir(uniq_name, dstats->root);
+
+    if(dstats->root == NULL) {
+        mpc_log("Failed to create debugfs directory.\n");
+    } else {
+        debugfs_create_u64("rtt_meas_us", 0644, dstats->root, &dstats->rtt_meas_us);
+        debugfs_create_u64("rate_set", 0644, dstats->root, &dstats->rate_set);
+        dfs_id = (dfs_id + 1) % ULLONG_MAX;
+    }
+}
+
+void mpc_dfs_release(struct mpc_dfs_stats *dstats)
+{
+    debugfs_remove_recursive(dstats->root);
+}
+
 
 void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
         real_int alpha, size_t p, size_t q)

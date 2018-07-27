@@ -34,26 +34,20 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_b
     // debug.
     md->dstats.rtt_meas_us = rtt_meas_us;
 
-    mpc_log("control_update\n");
     control_update(md, rtt_meas);
 
-    mpc_log("avg_rtt\n");
     md->avg_rtt = RA( RM(RS(REAL_ONE, md->gamma), rtt_meas),
         RM(md->gamma, md->avg_rtt) );
 
-    mpc_log("avg_rtt_var\n");
     md->avg_rtt_var =
         RA( RM(RS(REAL_ONE, md->gamma),
               square_diff_real(md->predicted_rtt, md->avg_rtt)),
             RM(md->gamma, md->avg_rtt_var));
 
-    mpc_log("predicted_rtt\n");
     md->predicted_rtt = control_predict(md);
 
 
-    mpc_log("rate_opt\n");
     if(real_gt(set_rate, REAL_ZERO)) {
-        mpc_log("Probe, rate = %llu\n", rate_bs);
         rate_opt = set_rate;
     } else if(real_gt(md->avg_rtt, REAL_ZERO)
             && real_gt(md->avg_rtt_var, REAL_ZERO)
@@ -85,7 +79,6 @@ real_int control_process(struct model *md, real_int rtt_meas_us, real_int rate_b
     ret_rate = real_floor(RM(rate_opt, real_from_int(MB_PER_B)));
     // debug
     md->dstats.rate_set = ret_rate;
-    mpc_log("md->dstats.rate_set = %llu\n", md->dstats.rate_set);
 
     return ret_rate;
 }

@@ -1,5 +1,5 @@
 /*
- * net/sched/sch_mpc.c	A test QDisc, its basically pfifo with more logging.
+ * net/sched/sch_mpc.c	A model predictive control QDisc.
  *
  *		This program is free software; you can redistribute it and/or
  *		modify it under the terms of the GNU General Public License
@@ -22,31 +22,119 @@
 #include "../mpc/control.h"
 #include "sch_mpc.h"
 
-struct mpc_sched_data {
-    // The maximum rate to send in bytes per second.
-    u64 max_rate;
+
+const size_t NUM_FLOWS = 1024;
+
+
+struct mpc_flow {
+    struct sk_buff *head;
+    struct sk_buff *tail;
+    size_t qlen;
+
+    // The pacing rate to send in bytes per second.
+    u64 rate;
 
     // The time we sent, or will send, the last packet at.
     u64 last_time_to_send;
 
-    // Watchdog to set a timeout.
-    struct qdisc_watchdog watchdog;
+    // The time at which the next packet should be sent.
+    u64 time_to_send;
 
     u32 last_srtt;
 
-    struct model *md;
+    struct model md;
 };
 
 
-struct mpc_skb_cb {
-    // When should this packet be sent?
-    u64 time_to_send;
+struct mpc_sched_data {
+  struct mpc_flow *flows;
+  size_t current_flow;
+
+  // Watchdog to set a timeout.
+  struct qdisc_watchdog watchdog;
 };
 
-static inline struct mpc_skb_cb *mpc_skb_cb(struct sk_buff *skb)
+
+static void flow_enqueue(struct mpc_flow *flow, struct sk_buff *skb)
 {
-    qdisc_cb_private_validate(skb, sizeof(struct mpc_skb_cb));
-    return (struct mpc_skb_cb *)qdisc_skb_cb(skb)->data;
+    if (flow->head == NULL)
+        flow->head = skb;
+    else
+        flow->tail->next = skb;
+
+    flow->tail = skb;
+    skb->next = NULL;
+
+    flow->qlen++;
+}
+
+inline static struct sk_buff* flow_peek(struct mpc_flow *flow)
+{
+    return flow->head;
+}
+
+inline static struct sk_buff* flow_dequeue(struct mpc_flow *flow)
+{
+    struct sk_buff *skb = flow->head;
+
+    if(skb != NULL) {
+        flow->head = skb->next;
+        skb->next = NULL;
+
+        if(flow->head == NULL)
+            flow->tail = NULL;
+
+        flow->qlen--;
+    }
+
+    return skb;
+}
+
+
+inline static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
+{
+    u64 min_delay;
+
+    if(flow->head != NULL) {
+        if(flow->rate == 0)
+            min_delay = 0;
+        else
+            min_delay = NSEC_PER_SEC * flow->head->len / flow->rate;
+
+        // Take the max here to ensure that we don't go past the max rate on a
+        // burst.
+        flow->last_time_to_send = max_t(u64, time, flow->last_time_to_send) + min_delay;
+        flow->time_to_send = flow->last_time_to_send;
+    }
+}
+
+
+// Returns the next flow that needs to send a packet at time. If not such flow
+// exists NULL is returned.
+static struct mpc_flow* mpc_get_next_flow(struct Qdisc *sch, u64 time)
+{
+    struct mpc_sched_data *q = qdisc_priv(sch);
+    size_t i;
+
+    for(i = 0; i < NUM_FLOWS; i++) {
+        size_t idx = (i + q->current_flow) % NUM_FLOWS;
+        struct mpc_flow *flow = &q->flows[idx];
+        struct sk_buff *skb = flow_peek(flow);
+
+        if(flow->time_to_send <= time && skb != NULL) {
+            q->current_flow = idx;
+            return flow;
+        }
+    }
+
+    return NULL;
+}
+
+
+static size_t mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
+{
+    // TODO: Maybe use TCF as well.
+    return reciprocal_scale(skb_get_hash(skb), NUM_FLOWS);
 }
 
 
@@ -54,71 +142,43 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         struct sk_buff **to_free)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-    u64 now = ktime_get_ns();
+    struct mpc_flow *flow = &q->flows[mpc_classify(sch, skb)];
+    bool update_time = flow->head == NULL;
 
-    if(skb != NULL) {
-        u64 min_delay;
+    if(flow->qlen == sch->limit) {
+      return qdisc_drop(skb, sch, to_free);
+    } else if(skb != NULL) {
+        u64 now = ktime_get_ns();
 
-        if(q->max_rate == 0)
-            min_delay = 0;
-        else
-            min_delay = NSEC_PER_SEC * skb->len / q->max_rate;
+        flow_enqueue(flow, skb);
 
-        // Take the max here to ensure that we don't go past the max rate on a
-        // burst.
-        q->last_time_to_send = max_t(u64, now, q->last_time_to_send) + min_delay;
-        mpc_skb_cb(skb)->time_to_send = q->last_time_to_send;
+        if(update_time)
+            flow_update_time_to_send(flow, now);
     }
 
-    if (likely(sch->q.qlen < sch->limit))
-        return qdisc_enqueue_tail(skb, sch);
-
-    return qdisc_drop(skb, sch, to_free);
+    return 0;
 }
+
 
 static struct sk_buff* mpc_dequeue(struct Qdisc *sch)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-    struct sk_buff *skb = NULL;
+    struct mpc_flow *flow;
+    struct sk_buff *skb;
     u64 now = ktime_get_ns();
-    u64 next_tts = 0;  // The next time to send a packet.
+    u64 next_tts = 0;
+    size_t i;
 
-    // skb corresponds to whatever packet is ready, NULL if none are.
-    skb = qdisc_peek_head(sch);
+    mpc_qd_log("dequeue\n");
 
-    while(skb != NULL) {
-        u64 tts = mpc_skb_cb(skb)->time_to_send;
-        s64 over = tts - now;
+    flow = mpc_get_next_flow(sch, now);
 
-        // For diagnostics, ideally these values should be small.
-        if(over > 0)
-            mpc_qd_log("Time till send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
-        else {
-            over = -over;
-            mpc_qd_log("Time over send %lld.%llds\n", over/NSEC_PER_SEC, over%NSEC_PER_SEC);
-        }
-
-        // Only send out a packet if doing so doesn't go over the maximum
-        // bit rate.
-        if(mpc_skb_cb(skb)->time_to_send <= now)
-            goto next_packet;
-        else {
-            // Next send time should be for the closest packet.
-            if(next_tts > 0)
-                next_tts = min_t(u64, next_tts, tts);
-            else
-                next_tts = tts;
-
-            skb = skb->next;
-        }
+    if(flow == NULL) {
+        skb = NULL;
+        goto exit_dequeue;
     }
 
-    // No packets are ready to be sent, they need to wait.
-    skb = NULL;
-    goto exit_dequeue;
-
-next_packet:
-    skb = qdisc_dequeue_head(sch);
+    skb = flow_dequeue(flow);
 
     // Update rate using MPC.
     if(skb != NULL) {
@@ -134,20 +194,25 @@ next_packet:
             // srtt.
             //
             // TODO: Don't hardcode alpha.
-            if(q->last_srtt + (tp->srtt_us<<3) > (q->last_srtt<<3))
-                rtt = q->last_srtt + (tp->srtt_us<<3) - (q->last_srtt<<3);
+            if(flow->last_srtt + (tp->srtt_us<<3) > (flow->last_srtt<<3))
+                rtt = flow->last_srtt + (tp->srtt_us<<3) - (flow->last_srtt<<3);
             else
                 rtt = tp->srtt_us;
 
-            q->last_srtt = tp->srtt_us;
+            flow->last_srtt = tp->srtt_us;
 
-            q->max_rate = control_process(q->md, rtt, 0);
+            flow->rate = control_process(&flow->md, rtt, 0);
         }
-
-        mpc_qd_log("deq, skb->len = %d, cb->pkt_len = %d\n",
-                skb->len, qdisc_skb_cb(skb)->pkt_len);
     }
+
 exit_dequeue:
+    for(i = 0; i < NUM_FLOWS; i++) {
+        if(next_tts == 0)
+            next_tts = q->flows[i].time_to_send;
+        else
+            next_tts = min_t(u64, next_tts, q->flows[i].time_to_send);
+    }
+
     mpc_qd_log("next_tts = %lld.%lld\n", next_tts/NSEC_PER_SEC, next_tts%NSEC_PER_SEC);
     if(next_tts > 0)
         qdisc_watchdog_schedule_ns(&q->watchdog, next_tts);
@@ -158,14 +223,16 @@ exit_dequeue:
     return skb;
 }
 
+
 static struct sk_buff* mpc_peek(struct Qdisc *sch) {
-    return qdisc_peek_head(sch);
+    struct mpc_sched_data *q = qdisc_priv(sch);
+
+    return flow_peek(&q->flows[q->current_flow]);
 }
 
 
 static const struct nla_policy mpc_policy[TCA_MPC_MAX + 1] = {
     [TCA_MPC_LIMIT]			= { .type = NLA_U32 },
-    [TCA_MPC_MAXRATE]		= { .type = NLA_U32 },
 };
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
@@ -175,7 +242,7 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
         struct netlink_ext_ack *extack)
 #endif
 {
-    struct mpc_sched_data *q = qdisc_priv(sch);
+    //struct mpc_sched_data *q = qdisc_priv(sch);
     struct nlattr *tb[TCA_MPC_MAX + 1];
     int err;
 
@@ -189,9 +256,6 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
     if (tb[TCA_MPC_LIMIT])
         sch->limit = nla_get_u32(tb[TCA_MPC_LIMIT]);
 
-    if (tb[TCA_MPC_MAXRATE])
-        q->max_rate = nla_get_u32(tb[TCA_MPC_MAXRATE]);
-
     return err;
 }
 
@@ -204,15 +268,28 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
 #endif
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
+    size_t i;
 
-    q->max_rate = ~0U;
-    q->last_time_to_send = 0;
+    q->flows = kmalloc(NUM_FLOWS * sizeof(struct mpc_flow), GFP_KERNEL);
+
+    for(i = 0; i < NUM_FLOWS; i++) {
+        struct mpc_flow *flow = &q->flows[i];
+
+        flow->head = NULL;
+        flow->tail = NULL;
+        flow->qlen = 0;
+
+        flow->last_time_to_send = 0;
+
+        flow->last_srtt = 0;
+
+        // TODO: Move this to enqueue, use less memory.
+        model_init(&flow->md, 100, 10, 50, 50, 5, 1);
+    }
+
+    q->current_flow = 0;
+
     qdisc_watchdog_init(&q->watchdog, sch);
-
-    q->last_srtt = 0;
-
-    q->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-    model_init(q->md, 100, 10, 50, 50, 5, 1);
 
     sch->limit = qdisc_dev(sch)->tx_queue_len;
 
@@ -229,15 +306,14 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
 
 static int mpc_dump(struct Qdisc *sch, struct sk_buff *skb)
 {
-    struct mpc_sched_data *q = qdisc_priv(sch);
+    //struct mpc_sched_data *q = qdisc_priv(sch);
     struct nlattr *opts;
 
     opts = nla_nest_start(skb, TCA_OPTIONS);
     if (opts == NULL)
         goto nla_put_failure;
 
-    if (nla_put_u32(skb, TCA_MPC_LIMIT, sch->limit) ||
-        nla_put_u32(skb, TCA_MPC_MAXRATE, q->max_rate))
+    if (nla_put_u32(skb, TCA_MPC_LIMIT, sch->limit))
         goto nla_put_failure;
 
     return nla_nest_end(skb, opts);
@@ -257,9 +333,13 @@ static void mpc_reset(struct Qdisc *sch)
 static void mpc_destroy(struct Qdisc *sch)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
+    size_t i;
 
-    model_release(q->md);
-    kfree(q->md);
+    for(i = 0; i < NUM_FLOWS; i++) {
+        model_release(&q->flows[i].md);
+    }
+
+    kfree(q->flows);
 }
 
 struct Qdisc_ops mpc_qdisc_ops __read_mostly = {

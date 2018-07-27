@@ -1,5 +1,4 @@
 
-#include <linux/debugfs.h>
 #include <linux/printk.h>
 
 #ifndef MPC_UTIL_H
@@ -12,16 +11,5 @@
 #endif
 
 #define MB_PER_B (1 << 20)
-
-#define MPC_DFS_DIR "mpc"
-
-struct mpc_dfs_stats {
-    struct dentry *root;
-    u64 rtt_meas_us;
-    u64 rate_set;
-};
-
-void mpc_dfs_init(struct mpc_dfs_stats *dstats);
-void mpc_dfs_release(struct mpc_dfs_stats *dstats);
 
 #endif /* end of include guard: MPC_UTIL_H */
