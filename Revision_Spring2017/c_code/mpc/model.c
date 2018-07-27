@@ -42,35 +42,35 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
-        real_int alpha, size_t p, size_t q)
+void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
+        size_t p, size_t q)
 {
     int i;
 
-    md->psi = real_from_frac(psi, 100);
-    md->xi = real_from_frac(xi, 100);
-    md->gamma = real_from_frac(gamma, 100);
+    md->psi = psi*MPC_ONE/100;
+    md->xi = xi*MPC_ONE/100;
+    md->gamma = gamma*MPC_ONE/100;
 
-    md->avg_rtt = REAL_ZERO;
-    md->avg_rtt_var = REAL_ZERO;
-    md->avg_pacing_rate = REAL_ZERO;
+    md->avg_rtt = 0;
+    md->avg_rtt_var = 0;
+    md->avg_pacing_rate = 0;
 
-    md->predicted_rtt = REAL_ZERO;
+    md->predicted_rtt = 0;
 
     md->p = p;
     md->q = q;
 
-    md->alpha = real_from_frac(alpha, 100);
-    md->a = kmalloc(p*sizeof(real), GFP_KERNEL);
-    md->b = kmalloc(q*sizeof(real), GFP_KERNEL);
+    md->alpha = alpha*MPC_ONE/100;
+    md->a = kmalloc(p*sizeof(u8), GFP_KERNEL);
+    md->b = kmalloc(q*sizeof(u8), GFP_KERNEL);
 
     for(i = 0; i < p; i++)
-        md->a[i] = REAL_ZERO;
+        md->a[i] = 0;
     for(i = 0; i < q; i++)
-        md->b[i] = REAL_ZERO;
+        md->b[i] = 0;
 
-    lookback_init(&md->lb_rtt, p, REAL_ZERO);
-    lookback_init(&md->lb_pacing_rate, q, REAL_ZERO);
+    lookback_init(&md->lb_rtt, p, 0);
+    lookback_init(&md->lb_pacing_rate, q, 0);
 
     mpc_dfs_init(&md->dstats);
 }

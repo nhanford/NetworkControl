@@ -10,6 +10,11 @@
 #define USEC_PER_SEC 1000000
 #endif
 
-#define MB_PER_B (1 << 20)
+#define MPC_ONE 128
+
+static inline u64 wma(u64 weight, u64 avg, u64 x)
+{
+    return (MPC_ONE - weight)*avg/MPC_ONE + weight*x/MPC_ONE;
+}
 
 #endif /* end of include guard: MPC_UTIL_H */

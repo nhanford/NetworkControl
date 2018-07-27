@@ -2,6 +2,7 @@
 #include <linux/debugfs.h>
 
 #include "lookback.h"
+#include "util.h"
 
 #ifndef MODEL_H
 #define MODEL_H
@@ -18,33 +19,33 @@ struct mpc_dfs_stats {
 };
 
 struct model {
-    // These are all floats as defined above.
-    real psi;
-    real xi;
-    real gamma;
+    // These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
+    u8 psi;
+    u8 xi;
+    u8 gamma;
 
-    // s
-    real avg_rtt;
-    real avg_rtt_var;
+    // us
+    u64 avg_rtt;
+    u64 avg_rtt_var;
 
-    // MB/s
-    real avg_pacing_rate;
+    // B/s
+    u64 avg_pacing_rate;
 
-    // s
-    real predicted_rtt;
+    // us
+    u64 predicted_rtt;
 
     size_t p;
     size_t q;
 
-    // float
-    real alpha;
-    real *a;
-    real *b;
+    // These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
+    u8 alpha;
+    u8 *a;
+    u8 *b;
 
-    // s
+    // us
     struct lookback lb_rtt;
 
-    // MB/s
+    // B/s
     struct lookback lb_pacing_rate;
 
     // For debugging.
@@ -52,8 +53,8 @@ struct model {
 };
 
 // psi, xi, gamma, and alpha are percentages.
-void model_init(struct model *md, real_int psi, real_int xi, real_int gamma,
-        real_int alpha, size_t p, size_t q);
+void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
+        size_t p, size_t q);
 
 void model_release(struct model *md);
 
