@@ -27,6 +27,8 @@ const size_t NUM_FLOWS = 1024;
 
 
 struct mpc_flow {
+    u32 addr;
+
     struct sk_buff *head;
     struct sk_buff *tail;
     size_t qlen;
@@ -47,11 +49,12 @@ struct mpc_flow {
 
 
 struct mpc_sched_data {
-  struct mpc_flow *flows;
-  size_t current_flow;
+    // The flows. Currently index 0 is for unclassified flows.
+    struct mpc_flow *flows;
+    size_t current_flow;
 
-  // Watchdog to set a timeout.
-  struct qdisc_watchdog watchdog;
+    // Watchdog to set a timeout.
+    struct qdisc_watchdog watchdog;
 };
 
 
@@ -131,10 +134,33 @@ static struct mpc_flow* mpc_get_next_flow(struct Qdisc *sch, u64 time)
 }
 
 
-static size_t mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
+static struct mpc_flow* mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
 {
-    // TODO: Maybe use TCF as well.
-    return reciprocal_scale(skb_get_hash(skb), NUM_FLOWS);
+    // TODO: Reclaim flows. Also, I'm classifying by destination address. fq
+    // classifies by socket, and fq_codel uses a classiful qdisc (even though
+    // it isn't classful, *it's wierd*).
+    struct mpc_sched_data *q = qdisc_priv(sch);
+    struct mpc_flow *unused_flow = NULL;
+    int i;
+
+    if(skb->sk == NULL)
+        goto class_default;
+
+    for(i = 1; i < NUM_FLOWS; i++) {
+        if(q->flows[i].addr == skb->sk->sk_daddr)
+            return &q->flows[i];
+        else if(q->flows[i].addr == 0)
+            unused_flow = &q->flows[i];
+    }
+
+    if(unused_flow != NULL) {
+        unused_flow->addr = skb->sk->sk_daddr;
+        return unused_flow;
+    }
+
+class_default:
+    // No unused flows, default to 0.
+    return &q->flows[0];
 }
 
 
@@ -142,11 +168,11 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
         struct sk_buff **to_free)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-    struct mpc_flow *flow = &q->flows[mpc_classify(sch, skb)];
+    struct mpc_flow *flow = mpc_classify(sch, skb);
     bool update_time = flow->head == NULL;
 
     if(flow->qlen == sch->limit) {
-      return qdisc_drop(skb, sch, to_free);
+        return qdisc_drop(skb, sch, to_free);
     } else if(skb != NULL) {
         u64 now = ktime_get_ns();
 
@@ -168,8 +194,6 @@ static struct sk_buff* mpc_dequeue(struct Qdisc *sch)
     u64 now = ktime_get_ns();
     u64 next_tts = 0;
     size_t i;
-
-    mpc_qd_log("dequeue\n");
 
     flow = mpc_get_next_flow(sch, now);
 
@@ -213,7 +237,6 @@ exit_dequeue:
             next_tts = min_t(u64, next_tts, q->flows[i].time_to_send);
     }
 
-    mpc_qd_log("next_tts = %lld.%lld\n", next_tts/NSEC_PER_SEC, next_tts%NSEC_PER_SEC);
     if(next_tts > 0)
         qdisc_watchdog_schedule_ns(&q->watchdog, next_tts);
     else
@@ -274,6 +297,8 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
 
     for(i = 0; i < NUM_FLOWS; i++) {
         struct mpc_flow *flow = &q->flows[i];
+
+        flow->addr = 0;
 
         flow->head = NULL;
         flow->tail = NULL;
