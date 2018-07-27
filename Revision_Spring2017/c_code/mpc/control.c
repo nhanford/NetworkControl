@@ -14,7 +14,7 @@ inline u64 square_diff_u64(u64 x, u64 y)
     else
         diff = y - x;
 
-    return diff - diff;
+    return diff * diff;
 }
 
 
@@ -97,8 +97,6 @@ void control_update(struct model *md, u64 rtt_meas)
 {
     int i;
     u64 error;
-    u64 rtt_norm = 0;
-    u64 rate_norm = 0;
     u64 total_norm;
     bool add;
 
@@ -113,15 +111,21 @@ void control_update(struct model *md, u64 rtt_meas)
 
     for(i = 0; i < md->p; i++) {
         u64 rtt = lookback_index(&md->lb_rtt, i);
-        rtt_norm += rtt*rtt;
+        total_norm += rtt*rtt;
+
+        // Limit to prevent overflow.
+        total_norm = min_t(u64, total_norm, ((u64) 1) << 32);
     }
 
     for(i = 0; i < md->q; i++) {
         u64 rate = lookback_index(&md->lb_pacing_rate, i);
-        rate_norm += rate*rate;
+        total_norm += rate*rate;
+
+        // Limit to prevent overflow.
+        total_norm = min_t(u64, total_norm, ((u64) 1) << 32);
     }
 
-    total_norm = max_t(u64, 1, rtt_norm + rate_norm);
+    total_norm = max_t(u64, 1, total_norm);
 
 
     if(total_norm > 0) {
