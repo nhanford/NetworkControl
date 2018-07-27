@@ -1,6 +1,10 @@
 #!/bin/bash
 
-# > run.sh TEST DEST [ LOGTIME ]
+if [[ $# -lt 2 ]]
+then
+    echo "> run.sh TEST DEST [ LOGTIME ]"
+    exit 1
+fi
 
 test=$1
 dest=$2
