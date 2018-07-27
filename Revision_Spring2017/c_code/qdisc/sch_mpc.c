@@ -28,6 +28,7 @@ const size_t NUM_FLOWS = 1024;
 
 struct mpc_flow {
     u32 addr;
+    struct mpc_flow *next;
 
     struct sk_buff *head;
     struct sk_buff *tail;
@@ -49,13 +50,38 @@ struct mpc_flow {
 
 
 struct mpc_sched_data {
-    // The flows. Currently index 0 is for unclassified flows.
+    // The flows. Currently index 0 is for unclassified flows, and is also the
+    // head of the flow chain.
     struct mpc_flow *flows;
-    size_t current_flow;
+    struct mpc_flow *tail;
+    struct mpc_flow *current_flow;
 
     // Watchdog to set a timeout.
     struct qdisc_watchdog watchdog;
 };
+
+
+static void flow_init(struct mpc_flow *flow)
+{
+    flow->addr = 0;
+    flow->next = NULL;
+
+    flow->head = NULL;
+    flow->tail = NULL;
+    flow->qlen = 0;
+
+    flow->last_time_to_send = 0;
+
+    flow->last_srtt = 0;
+
+    // TODO: Move this to enqueue, use less memory.
+    model_init(&flow->md, 100, 10, 50, 50, 5, 1);
+}
+
+static void flow_release(struct mpc_flow *flow)
+{
+    model_release(&flow->md);
+}
 
 
 static void flow_enqueue(struct mpc_flow *flow, struct sk_buff *skb)
@@ -117,17 +143,30 @@ inline static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
 static struct mpc_flow* mpc_get_next_flow(struct Qdisc *sch, u64 time)
 {
     struct mpc_sched_data *q = qdisc_priv(sch);
-    size_t i;
+    struct mpc_flow *flow = q->current_flow;
 
-    for(i = 0; i < NUM_FLOWS; i++) {
-        size_t idx = (i + q->current_flow) % NUM_FLOWS;
-        struct mpc_flow *flow = &q->flows[idx];
+    while(flow != NULL) {
         struct sk_buff *skb = flow_peek(flow);
 
         if(flow->time_to_send <= time && skb != NULL) {
-            q->current_flow = idx;
+            q->current_flow = flow;
             return flow;
         }
+
+        flow = flow->next;
+    }
+
+    flow = &q->flows[0];
+
+    while(flow != NULL && flow != q->current_flow) {
+        struct sk_buff *skb = flow_peek(flow);
+
+        if(flow->time_to_send <= time && skb != NULL) {
+            q->current_flow = flow;
+            return flow;
+        }
+
+        flow = flow->next;
     }
 
     return NULL;
@@ -155,6 +194,8 @@ static struct mpc_flow* mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
 
     if(unused_flow != NULL) {
         unused_flow->addr = skb->sk->sk_daddr;
+        q->tail->next = unused_flow;
+        q->tail = unused_flow;
         return unused_flow;
     }
 
@@ -250,7 +291,7 @@ exit_dequeue:
 static struct sk_buff* mpc_peek(struct Qdisc *sch) {
     struct mpc_sched_data *q = qdisc_priv(sch);
 
-    return flow_peek(&q->flows[q->current_flow]);
+    return flow_peek(q->current_flow);
 }
 
 
@@ -293,26 +334,15 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
     struct mpc_sched_data *q = qdisc_priv(sch);
     size_t i;
 
+    mpc_qd_log("Size of memory: %lu", NUM_FLOWS * sizeof(struct mpc_flow));
+
     q->flows = kmalloc(NUM_FLOWS * sizeof(struct mpc_flow), GFP_KERNEL);
 
-    for(i = 0; i < NUM_FLOWS; i++) {
-        struct mpc_flow *flow = &q->flows[i];
+    for(i = 0; i < NUM_FLOWS; i++)
+        flow_init(&q->flows[i]);
 
-        flow->addr = 0;
-
-        flow->head = NULL;
-        flow->tail = NULL;
-        flow->qlen = 0;
-
-        flow->last_time_to_send = 0;
-
-        flow->last_srtt = 0;
-
-        // TODO: Move this to enqueue, use less memory.
-        model_init(&flow->md, 100, 10, 50, 50, 5, 1);
-    }
-
-    q->current_flow = 0;
+    q->tail = &q->flows[0];
+    q->current_flow = q->tail;
 
     qdisc_watchdog_init(&q->watchdog, sch);
 
@@ -361,7 +391,7 @@ static void mpc_destroy(struct Qdisc *sch)
     size_t i;
 
     for(i = 0; i < NUM_FLOWS; i++) {
-        model_release(&q->flows[i].md);
+        flow_release(&q->flows[i]);
     }
 
     kfree(q->flows);
