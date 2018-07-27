@@ -74,7 +74,9 @@ static void flow_init(struct mpc_flow *flow)
 
     flow->last_srtt = 0;
 
-    // TODO: Move this to enqueue, use less memory.
+    // NOTE: We could move this to enqueue to use less memory. However, this
+    // would require allocation on many skbuff classifications, which will hurt
+    // performance.
     model_init(&flow->md, 100, 10, 50, 50, 5, 1);
 }
 
