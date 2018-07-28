@@ -27,6 +27,8 @@ const size_t NUM_FLOWS = 1024;
 
 
 struct mpc_flow {
+    bool used;
+
     u32 addr;
     struct mpc_flow *next;
 
@@ -63,6 +65,8 @@ struct mpc_sched_data {
 
 static void flow_init(struct mpc_flow *flow)
 {
+    flow->used = true;
+
     flow->addr = 0;
     flow->next = NULL;
 
@@ -74,14 +78,12 @@ static void flow_init(struct mpc_flow *flow)
 
     flow->last_srtt = 0;
 
-    // NOTE: We could move this to enqueue to use less memory. However, this
-    // would require allocation on many skbuff classifications, which will hurt
-    // performance.
     model_init(&flow->md, 100, 10, 50, 50, 5, 1);
 }
 
 static void flow_release(struct mpc_flow *flow)
 {
+    flow->used = false;
     model_release(&flow->md);
 }
 
@@ -175,6 +177,7 @@ static struct mpc_flow* mpc_get_next_flow(struct Qdisc *sch, u64 time)
 }
 
 
+// Returns the flow that skb is a part of. Creates a new flow if necessary.
 static struct mpc_flow* mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
 {
     // TODO: Reclaim flows. Also, I'm classifying by destination address. fq
@@ -188,13 +191,14 @@ static struct mpc_flow* mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
         goto class_default;
 
     for(i = 1; i < NUM_FLOWS; i++) {
-        if(q->flows[i].addr == skb->sk->sk_daddr)
+        if(q->flows[i].used && q->flows[i].addr == skb->sk->sk_daddr)
             return &q->flows[i];
-        else if(q->flows[i].addr == 0)
+        else if(! q->flows[i].used)
             unused_flow = &q->flows[i];
     }
 
     if(unused_flow != NULL) {
+        flow_init(unused_flow);
         unused_flow->addr = skb->sk->sk_daddr;
         q->tail->next = unused_flow;
         q->tail = unused_flow;
@@ -336,13 +340,12 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
     struct mpc_sched_data *q = qdisc_priv(sch);
     size_t i;
 
-    mpc_qd_log("Size of memory: %lu", NUM_FLOWS * sizeof(struct mpc_flow));
-
     q->flows = kmalloc(NUM_FLOWS * sizeof(struct mpc_flow), GFP_KERNEL);
 
     for(i = 0; i < NUM_FLOWS; i++)
-        flow_init(&q->flows[i]);
+        q->flows[i].used = false;
 
+    flow_init(&q->flows[0]);
     q->tail = &q->flows[0];
     q->current_flow = q->tail;
 
@@ -393,7 +396,8 @@ static void mpc_destroy(struct Qdisc *sch)
     size_t i;
 
     for(i = 0; i < NUM_FLOWS; i++) {
-        flow_release(&q->flows[i]);
+        if(q->flows[i].used)
+            flow_release(&q->flows[i]);
     }
 
     kfree(q->flows);
