@@ -97,7 +97,7 @@ void control_update(struct model *md, u64 rtt_meas)
 {
     int i;
     u64 error;
-    u64 total_norm;
+    u64 total_norm = 0;
     bool add;
 
     if(md->predicted_rtt < rtt_meas) {
