@@ -14,7 +14,7 @@
 
 static inline u64 wma(u64 weight, u64 avg, u64 x)
 {
-    return (MPC_ONE - weight)*avg/MPC_ONE + weight*x/MPC_ONE;
+	return (MPC_ONE - weight)*avg/MPC_ONE + weight*x/MPC_ONE;
 }
 
 #endif /* end of include guard: MPC_UTIL_H */
