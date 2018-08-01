@@ -8,12 +8,12 @@ import pandas as pd
 from data import Data
 
 parser = argparse.ArgumentParser(description="Statistically analyzes test results.")
-parser.add_argument('TEST', type=str,
+parser.add_argument('test', type=str,
         help="The name of the test to analyze.")
 args = parser.parse_args()
 
 
-data = Data(args.TEST)
+data = Data(args.test)
 
 print("For BWCtl")
 print(data.stream[['bits_per_second', 'rtt', 'rttvar', 'retransmits', 'snd_cwnd']].describe())

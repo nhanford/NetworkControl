@@ -8,20 +8,20 @@ from data import Data
 bwctlStartTime = 0
 
 parser = argparse.ArgumentParser(description="Plots test results.")
-parser.add_argument('TEST', type=str,
+parser.add_argument('test', type=str,
         help="The name of the test to run.")
-parser.add_argument('--title', type=str,
+parser.add_argument('-t', '--title', type=str,
         help="Sets title for figure.")
-parser.add_argument('--output', type=str,
+parser.add_argument('-o', '--output', type=str,
         help="Sets output file.")
-parser.add_argument('--limit-quantile', type=float,
+parser.add_argument('-q', '--limit-quantile', type=float,
         help="Limits output range to within double of a certain quantile.")
-parser.add_argument('--id', type=str,
+parser.add_argument('-i', '--id', type=str,
         help="Only select kernel output on ID.")
 args = parser.parse_args()
 
 
-data = Data(args.TEST)
+data = Data(args.test)
 
 if args.id is not None:
     mid = args.id
