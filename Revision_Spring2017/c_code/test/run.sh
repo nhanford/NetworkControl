@@ -21,7 +21,7 @@ loglimit=10000
 
 echo "Logging will take $logTime seconds."
 
-./logDFS.sh "$test-module.json" $logTime &
+python logDFS.py "$test-module.json" $logTime &
 
 outputFiles=$(bwctl -c $dest -T iperf3 -i.1 -w150m -t60 --parsable -p)
 
