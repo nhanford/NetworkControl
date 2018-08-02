@@ -60,7 +60,7 @@ square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 	}
 
 	// Clamp rate
-	// TODO: Make bounds less arbitrary than 17 mbit/s. 1 << 32 is to limit
+	// TODO: Make bounds less arbitrary than 100 mbit/s. 1 << 32 is to limit
 	// overflows.
 	rate_opt = min_t(u64, max_t(u64, rate_opt,
 			((u64) 100) << 17), ((u64) 1) << 32);
