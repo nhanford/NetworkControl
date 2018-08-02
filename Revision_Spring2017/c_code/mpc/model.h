@@ -11,7 +11,7 @@
 
 
 struct mpc_dfs_stats {
-	struct dentry *root;
+	struct dentry *dir;
 
 	int id;
 	u64 rtt_meas_us;

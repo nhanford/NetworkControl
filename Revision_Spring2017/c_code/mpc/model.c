@@ -1,10 +1,13 @@
 
 #include <linux/limits.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 
 #include "model.h"
 
 
+static struct dentry *root = NULL;
+static DEFINE_SPINLOCK(dfs_lock);
 static unsigned long long dfs_id = 0;
 
 
@@ -13,26 +16,32 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	// We need to create a unique name for each DFS since multiple instances may
 	// be running.
 	char uniq_name[32];
+	unsigned long flags;
 
+	dstats->dir = NULL;
 	dstats->rtt_meas_us = 0;
 	dstats->rate_set = 0;
 
 	sprintf(uniq_name, "%lld", dfs_id);
 
-	dstats->root = debugfs_lookup(MPC_DFS_DIR, NULL);
 
-	if (dstats->root == NULL)
-		dstats->root = debugfs_create_dir(MPC_DFS_DIR, NULL);
+	spin_lock_irqsave(&dfs_lock, flags);
 
-	if (dstats->root != NULL)
-		dstats->root = debugfs_create_dir(uniq_name, dstats->root);
+	if (root == NULL)
+		root = debugfs_create_dir(MPC_DFS_DIR, NULL);
 
-	if (dstats->root == NULL) {
+	if (root != NULL)
+		dstats->dir = debugfs_create_dir(uniq_name, root);
+
+	spin_unlock_irqrestore(&dfs_lock, flags);
+
+
+	if (dstats->dir == NULL) {
 		mpc_log("Failed to create debugfs directory.\n");
 	} else {
-		debugfs_create_u64("rtt_meas_us", 0644, dstats->root,
+		debugfs_create_u64("rtt_meas_us", 0644, dstats->dir,
 				&dstats->rtt_meas_us);
-		debugfs_create_u64("rate_set", 0644, dstats->root,
+		debugfs_create_u64("rate_set", 0644, dstats->dir,
 				&dstats->rate_set);
 		dfs_id = (dfs_id + 1) % ULLONG_MAX;
 	}
@@ -40,7 +49,14 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 
 void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 {
-	debugfs_remove_recursive(dstats->root);
+	unsigned long flags;
+
+	spin_lock_irqsave(&dfs_lock, flags);
+	if (root != NULL)
+		debugfs_remove_recursive(root);
+
+	root = NULL;
+	spin_unlock_irqrestore(&dfs_lock, flags);
 }
 
 
