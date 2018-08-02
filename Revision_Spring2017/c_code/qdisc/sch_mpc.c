@@ -24,6 +24,8 @@
 
 
 const size_t NUM_FLOWS = 1024;
+const int INTER_PROBE_TIME_US = 1000000;
+const int MAX_PROBE_TIME_US = 1000000;
 
 
 struct mpc_flow {
@@ -45,7 +47,15 @@ struct mpc_flow {
 	// The time at which the next packet should be sent.
 	u64 time_to_send;
 
+	// Last smoothed rtt seen by the model.
 	u32 last_srtt;
+
+	bool probing;
+	u64 target_lat;
+	union {
+		u64 probe_time_to_start;
+		u64 probe_time_to_stop;
+	};
 
 	struct model md;
 };
@@ -78,6 +88,10 @@ static void flow_init(struct mpc_flow *flow)
 
 	flow->last_srtt = 0;
 
+	flow->probing = false;
+	flow->probe_time_to_start = 0;
+	flow->probe_time_to_stop = 0;
+
 	model_init(&flow->md, 100, 10, 50, 50, 5, 1);
 }
 
@@ -106,7 +120,7 @@ inline static struct sk_buff *flow_peek(struct mpc_flow *flow)
 	return flow->head;
 }
 
-inline static struct sk_buff *flow_dequeue(struct mpc_flow *flow)
+static struct sk_buff *flow_dequeue(struct mpc_flow *flow)
 {
 	struct sk_buff *skb = flow->head;
 
@@ -124,7 +138,7 @@ inline static struct sk_buff *flow_dequeue(struct mpc_flow *flow)
 }
 
 
-inline static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
+static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
 {
 	u64 min_delay;
 
@@ -138,6 +152,44 @@ inline static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
 		// burst.
 		flow->last_time_to_send = max_t(u64, time, flow->last_time_to_send) + min_delay;
 		flow->time_to_send = flow->last_time_to_send;
+	}
+}
+
+static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
+{
+	u64 rtt;
+
+	// srtt' = (1 - a) * srtt + a * rtt
+	// rtt = srtt + (srtt' - srtt)/a
+	// Reading the sources tells us that a = 1/8.
+	// We have to make sure we get a positive rtt, otherwise estimate as
+	// srtt.
+	//
+	// TODO: Don't hardcode alpha.
+	if (flow->last_srtt + (srtt_us<<3) > (flow->last_srtt<<3))
+		rtt = flow->last_srtt + (srtt_us<<3) - (flow->last_srtt<<3);
+	else
+		rtt = srtt_us;
+
+	flow->last_srtt = srtt_us;
+
+
+	if(time >= flow->probe_time_to_start) {
+		flow->probing = true;
+		flow->probe_time_to_stop = time + MAX_PROBE_TIME_US;
+		flow->target_lat = 2*rtt;
+	}
+
+	if(flow->probing) {
+		if(srtt_us >= flow->target_lat || time >= flow->probe_time_to_stop) {
+			flow->probing = false;
+			flow->probe_time_to_start = time + INTER_PROBE_TIME_US;
+		} else {
+			flow->rate = control_process(&flow->md, rtt,
+						2*flow->rate);
+		}
+	} else {
+		flow->rate = control_process(&flow->md, rtt, 0);
 	}
 }
 
@@ -253,27 +305,11 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 
 	// Update rate using MPC.
 	if (skb != NULL && skb->sk != NULL
-			&& skb->sk->sk_protocol == IPPROTO_TCP) {
+		&& skb->sk->sk_protocol == IPPROTO_TCP) {
 		// NOTE: There is a need to condsider this for different flows.
 		struct tcp_sock *tp = tcp_sk(skb->sk);
-		u32 rtt;
 
-		// srtt' = (1 - a) * srtt + a * rtt
-		// rtt = srtt + (srtt' - srtt)/a
-		// Reading the sources tells us that a = 1/8.
-		// We have to make sure we get a positive rtt, otherwise estimate as
-		// srtt.
-		//
-		// TODO: Don't hardcode alpha.
-		if (flow->last_srtt + (tp->srtt_us<<3) > (flow->last_srtt<<3))
-			rtt = flow->last_srtt + (tp->srtt_us<<3)
-				- (flow->last_srtt<<3);
-		else
-			rtt = tp->srtt_us;
-
-		flow->last_srtt = tp->srtt_us;
-
-		flow->rate = control_process(&flow->md, rtt, 0);
+		flow_update_rate(flow, tp->srtt_us, now);
 	}
 
 exit_dequeue:
@@ -333,8 +369,6 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
 static int mpc_init(struct Qdisc *sch, struct nlattr *opt)
 #else
-static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
-		struct netlink_ext_ack *extack)
 #endif
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
