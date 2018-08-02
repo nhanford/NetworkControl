@@ -16,6 +16,7 @@ struct mpc_dfs_stats {
 	int id;
 	u64 rtt_meas_us;
 	u64 rate_set;
+	bool probing;
 };
 
 struct model {

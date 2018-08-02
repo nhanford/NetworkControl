@@ -42,6 +42,7 @@ square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 
 	if (rate > 0) {
 		rate_opt = rate;
+		md->dstats.probing = true;
 	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0 && b0 > 0) {
 		// NOTE: Make sure MPC_ONE offsets anything scaled by it. psi, xi,
@@ -57,6 +58,8 @@ square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 
 		if (t5 > t6)
 			rate_opt = t5 - t6;
+
+		md->dstats.probing = false;
 	}
 
 	// Clamp rate

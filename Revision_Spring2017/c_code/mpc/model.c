@@ -21,6 +21,7 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	dstats->dir = NULL;
 	dstats->rtt_meas_us = 0;
 	dstats->rate_set = 0;
+	dstats->probing = false;
 
 	sprintf(uniq_name, "%lld", dfs_id);
 
@@ -39,10 +40,12 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	if (dstats->dir == NULL) {
 		mpc_log("Failed to create debugfs directory.\n");
 	} else {
-		debugfs_create_u64("rtt_meas_us", 0644, dstats->dir,
+		debugfs_create_u64("rtt_meas_us", 0444, dstats->dir,
 				&dstats->rtt_meas_us);
-		debugfs_create_u64("rate_set", 0644, dstats->dir,
+		debugfs_create_u64("rate_set", 0444, dstats->dir,
 				&dstats->rate_set);
+		debugfs_create_bool("probing", 0444, dstats->dir,
+				&dstats->probing);
 		dfs_id = (dfs_id + 1) % ULLONG_MAX;
 	}
 }

@@ -32,12 +32,18 @@ while t <= end:
 
     for mpc in glob.glob("/sys/kernel/debug/mpc/*"):
         try:
-            with open(mpc + "/rtt_meas_us") as rttF, open(mpc + "/rate_set") as rateF:
+            with open(mpc + "/rtt_meas_us") as rttF, open(mpc + "/rate_set") as rateF, open(mpc + "/probing") as probingF:
                 rtt = int(rttF.read())
                 rate = int(rateF.read())
 
+                if probingF.read() == "Y":
+                    probing = True
+                else:
+                    probing = False
+
                 data.append({'time': t, 'id': os.path.basename(mpc),
-                    'rtt_meas_us': rtt, 'rate_set': rate})
+                    'rtt_meas_us': rtt, 'rate_set': rate,
+                    'probing': probing})
 
         except FileNotFoundError:
             pass
