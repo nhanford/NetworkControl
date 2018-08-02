@@ -36,7 +36,7 @@ while t <= end:
                 rtt = int(rttF.read())
                 rate = int(rateF.read())
 
-                if probingF.read() == "Y":
+                if probingF.read() == "Y\n":
                     probing = True
                 else:
                     probing = False

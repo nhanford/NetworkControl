@@ -25,7 +25,7 @@
 
 const size_t NUM_FLOWS = 1024;
 const u64 INTER_PROBE_TIME_NS = 10*NSEC_PER_SEC;
-const u64 MAX_PROBE_TIME_NS = NSEC_PER_SEC/4;
+const u64 MAX_PROBE_TIME_NS = NSEC_PER_SEC;
 
 
 struct mpc_flow {
@@ -181,7 +181,7 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
 	}
 
 	if(flow->probing) {
-		if(srtt_us >= flow->target_lat || time >= flow->probe_time_to_stop) {
+		if(rtt >= flow->target_lat || time >= flow->probe_time_to_stop) {
 			flow->probing = false;
 			flow->probe_time_to_start = time + INTER_PROBE_TIME_NS;
 		} else {
