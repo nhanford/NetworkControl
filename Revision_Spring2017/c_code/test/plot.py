@@ -41,8 +41,9 @@ ax2 = ax1.twinx()
 ax3 = ax[0][1]
 ax4 = ax3.twinx()
 ax5 = ax[1][0]
-ax6 = ax[1][1]
-ax7 = ax6.twinx()
+ax6 = ax5.twinx()
+ax7 = ax[1][1]
+ax8 = ax7.twinx()
 
 ax1.plot(data.stream.start, rtt_adj, 'r', label = 'RTT')
 ax1.set_xlabel('Time (s)')
@@ -63,12 +64,16 @@ ax5.plot(data.stream.start, cwnd_adj, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window (kbytes)')
 
-ax6.plot(data.module.time, mpcRTT_adj, 'ro', label = 'MPC Observed RTT')
-ax6.set_xlabel('Time (s)')
-ax6.set_ylabel('MPC RTT (ms)')
+ax6.plot(data.module.time, data.module.probing, 'go', label = 'Probing')
+ax6.set_ylabel('Probing')
 
-ax7.plot(data.module.time, mpcRate_adj, 'bo', label = 'MPC Set Rate')
-ax7.set_ylabel('MPC Rate (mbit/s)')
+
+ax7.plot(data.module.time, mpcRTT_adj, 'ro', label = 'MPC Observed RTT')
+ax7.set_xlabel('Time (s)')
+ax7.set_ylabel('MPC RTT (ms)')
+
+ax8.plot(data.module.time, mpcRate_adj, 'bo', label = 'MPC Set Rate')
+ax8.set_ylabel('MPC Rate (mbit/s)')
 
 if args.limit_quantile is not None:
     ax1.set_ylim(0, rtt_adj.quantile(args.limit_quantile)*2)
@@ -76,8 +81,9 @@ if args.limit_quantile is not None:
     ax3.set_ylim(0, rate_adj.quantile(args.limit_quantile)*2)
     ax4.set_ylim(0, data.stream.retransmits.quantile(args.limit_quantile)*2)
     ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
-    ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
-    ax7.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
+    ax6.set_ylim(-1, 2)
+    ax7.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
+    ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
 
 fig.legend()
 
