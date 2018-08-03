@@ -82,8 +82,12 @@ if args.limit_quantile is not None:
     ax4.set_ylim(0, data.stream.retransmits.quantile(args.limit_quantile)*2)
     ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
     ax6.set_ylim(-1, 2)
-    ax7.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
-    ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
+
+    if len(mpcRTT_adj) > 0:
+        ax7.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
+
+    if len(mpcRate_adj) > 0:
+        ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
 
 fig.legend()
 
