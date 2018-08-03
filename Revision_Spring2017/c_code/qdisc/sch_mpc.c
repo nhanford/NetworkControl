@@ -157,8 +157,6 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
 
 static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
 {
-	u64 rtt;
-
 	// srtt' = (1 - a) * srtt + a * rtt
 	// rtt = srtt + (srtt' - srtt)/a
 	// Reading the sources tells us that a = 1/8.
@@ -166,10 +164,14 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
 	// srtt.
 	//
 	// TODO: Don't hardcode alpha.
-	if (flow->last_srtt + (srtt_us<<3) > (flow->last_srtt<<3))
-		rtt = flow->last_srtt + (srtt_us<<3) - (flow->last_srtt<<3);
+	u64 rtt;
+	u64 t1 = flow->last_srtt + 8*srtt_us;
+	u64 t2 = 8*flow->last_srtt;
+
+	if (t1 > t2)
+		rtt = t1 - t2;
 	else
-		rtt = srtt_us;
+		rtt = 0;
 
 	flow->last_srtt = srtt_us;
 
