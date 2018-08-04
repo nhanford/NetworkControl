@@ -44,7 +44,7 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 		debugfs_create_u64("rtt_meas_us", 0444, dstats->dir,
 				&dstats->rtt_meas_us);
 		debugfs_create_u64("rtt_pred_us", 0444, dstats->dir,
-				&dstats->rtt_meas_us);
+				&dstats->rtt_pred_us);
 		debugfs_create_u64("rate_set", 0444, dstats->dir,
 				&dstats->rate_set);
 		debugfs_create_bool("probing", 0444, dstats->dir,
