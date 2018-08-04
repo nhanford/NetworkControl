@@ -85,8 +85,8 @@ void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
 	md->q = q;
 
 	md->alpha = alpha*MPC_ONE/100;
-	md->a = kmalloc(p*sizeof(u8), GFP_KERNEL);
-	md->b = kmalloc(q*sizeof(u8), GFP_KERNEL);
+	md->a = kmalloc(p*sizeof(u64), GFP_KERNEL);
+	md->b = kmalloc(q*sizeof(u64), GFP_KERNEL);
 
 	for (i = 0; i < p; i++)
 		md->a[i] = 0;

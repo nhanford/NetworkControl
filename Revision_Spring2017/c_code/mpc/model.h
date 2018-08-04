@@ -38,10 +38,12 @@ struct model {
 	size_t p;
 	size_t q;
 
-	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
+	// This is out of MPC_DIV. So, 0.5 = MPC_DIV/2
 	u8 alpha;
-	u8 *a;
-	u8 *b;
+
+	// us
+	u64 *a;
+	u64 *b;
 
 	// us
 	struct lookback lb_rtt;
