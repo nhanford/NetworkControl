@@ -5,8 +5,8 @@ do
   test=${file%-bwctl.json}
 
   if [[ -e "$test-module.json"
-    && ((! -e "$test-plot.pdf") || ($file -nt "$test-plot.pdf")) ]]
+    && ((! -e "$test-plot.pdf") || ($file -nt "$test-plot")) ]]
   then
-    python ./plot.py $test --title "Test: $test" --output "$test-plot.pdf"
+    python ./plot.py $test --output "$test-plot"
   fi
 done
