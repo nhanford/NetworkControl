@@ -20,6 +20,7 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 
 	dstats->dir = NULL;
 	dstats->rtt_meas_us = 0;
+	dstats->rtt_pred_us = 0;
 	dstats->rate_set = 0;
 	dstats->probing = false;
 
@@ -41,6 +42,8 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 		mpc_log("Failed to create debugfs directory.\n");
 	} else {
 		debugfs_create_u64("rtt_meas_us", 0444, dstats->dir,
+				&dstats->rtt_meas_us);
+		debugfs_create_u64("rtt_pred_us", 0444, dstats->dir,
 				&dstats->rtt_meas_us);
 		debugfs_create_u64("rate_set", 0444, dstats->dir,
 				&dstats->rate_set);

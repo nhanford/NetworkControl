@@ -29,6 +29,7 @@ u64 control_process(struct model *md, u64 rtt_meas, u64 rate)
 
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
+	md->dstats.rtt_pred_us = md->predicted_rtt;
 
 	control_update(md, rtt_meas);
 

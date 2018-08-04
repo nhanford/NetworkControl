@@ -13,8 +13,8 @@
 struct mpc_dfs_stats {
 	struct dentry *dir;
 
-	int id;
 	u64 rtt_meas_us;
+	u64 rtt_pred_us;
 	u64 rate_set;
 	bool probing;
 };
