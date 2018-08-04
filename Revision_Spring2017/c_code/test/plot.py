@@ -46,7 +46,7 @@ ax5 = bwax[1][0]
 
 modfig, modax = plt.subplots(2, 2, figsize=(10, 10))
 ax6 = modax[0][0]
-ax7 = ax6.twinx()
+#ax7 = ax6.twinx()
 ax8 = modax[0][1]
 ax9 = ax8.twinx()
 
@@ -71,12 +71,9 @@ ax5.set_ylabel('Congestion Window (kbytes)')
 
 
 ax6.plot(data.module.time, mpcRTT_adj, 'ro', label = 'MPC Observed RTT')
+ax6.plot(data.module.time, mpcRTTPred_adj, 'y', label = 'MPC Predicted RTT')
 ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('MPC RTT (ms)')
-
-ax7.plot(data.module.time, mpcRTTPred_adj, 'y', label = 'MPC Predicted RTT')
-ax7.set_xlabel('Time (s)')
-ax7.set_ylabel('Pred RTT (ms)')
 
 ax8.plot(data.module.time, mpcRate_adj, 'bo', label = 'MPC Set Rate')
 ax8.set_xlabel('Time (s)')
@@ -94,10 +91,9 @@ if args.limit_quantile is not None:
     ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
 
     if len(mpcRTT_adj) > 0:
-        ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
-
-    if len(mpcRTTPred_adj) > 0:
-        ax7.set_ylim(0, mpcRTTPred_adj.quantile(args.limit_quantile)*2)
+        q1 = mpcRTT_adj.quantile(args.limit_quantile)
+        q2 = mpcRTTPred_adj.quantile(args.limit_quantile)
+        ax6.set_ylim(0, max(q1, q2)*2)
 
     if len(mpcRate_adj) > 0:
         ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
