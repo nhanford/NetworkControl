@@ -36,7 +36,7 @@ u64 control_process(struct model *md, u64 rtt_meas, u64 rate)
 	md->avg_rtt = max_t(u64, 1, wma(md->gamma, md->avg_rtt, rtt_meas));
 
 	md->avg_rtt_var = max_t(u64, 1, wma(md->gamma, md->avg_rtt_var,
-square_diff_u64(md->predicted_rtt, md->avg_rtt)));
+				square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 
 	md->predicted_rtt = control_predict(md);
 
@@ -83,14 +83,14 @@ square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 
 u64 control_predict(struct model *md)
 {
-	u64 predicted_rtt = 0;
+	s64 predicted_rtt = 0;
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
-		predicted_rtt += md->a[i] * lookback_index(&md->lb_rtt, i) / MPC_ONE;
+		predicted_rtt += md->a[i] * (s64) lookback_index(&md->lb_rtt, i) / MPC_ONE;
 
 	for (i = 0; i < md->q; i++)
-		predicted_rtt += md->b[i] * lookback_index(&md->lb_pacing_rate, i) / MPC_ONE;
+		predicted_rtt += md->b[i] * (s64) lookback_index(&md->lb_pacing_rate, i) / MPC_ONE;
 
 	return predicted_rtt;
 }
@@ -98,18 +98,11 @@ u64 control_predict(struct model *md)
 
 void control_update(struct model *md, u64 rtt_meas)
 {
-	int i;
-	u64 error;
-	u64 total_norm = 0;
-	bool add;
+	size_t i;
+	s64 error;
+	s64 total_norm = 0;
 
-	if (md->predicted_rtt < rtt_meas) {
-		error = rtt_meas - md->predicted_rtt;
-		add = true;
-	} else {
-		error = md->predicted_rtt - rtt_meas;
-		add = false;
-	}
+	error = rtt_meas - md->predicted_rtt;
 
 
 	for (i = 0; i < md->p; i++) {
@@ -117,45 +110,40 @@ void control_update(struct model *md, u64 rtt_meas)
 		total_norm += rtt*rtt;
 
 		// Limit to prevent overflow.
-		total_norm = min_t(u64, total_norm, ((u64) 1) << 32);
+		if (total_norm > S64_MAX - rtt*rtt)
+			total_norm = S64_MAX;
+		else
+			total_norm += rtt*rtt;
 	}
 
 	for (i = 0; i < md->q; i++) {
 		u64 rate = lookback_index(&md->lb_pacing_rate, i);
-		total_norm += rate*rate;
 
-		// Limit to prevent overflow.
-		total_norm = min_t(u64, total_norm, ((u64) 1) << 32);
+		if (total_norm > S64_MAX - rate*rate)
+			total_norm = S64_MAX;
+		else
+			total_norm += rate*rate;
 	}
 
-	total_norm = max_t(u64, 1, total_norm);
+	total_norm = max_t(s64, 1, total_norm);
 
 
 	if (total_norm == 0)
 		goto exit;
 
 	for (i = 0; i < md->p; i++) {
-		u64 rtt = lookback_index(&md->lb_rtt, i);
-		u64 delta = rtt * md->alpha * error / total_norm;
+		// FIXME: This overflows.
+		s64 rtt = lookback_index(&md->lb_rtt, i);
+		s64 delta = rtt * (s64) md->alpha * error / (s64) total_norm;
 
-		if (add)
-			md->a[i] += delta;
-		else if (md->a[i] > delta)
-			md->a[i] -= delta;
-		else
-			md->a[i] = 0;
+		md->a[i] += delta;
 	}
 
 	for (i = 0; i < md->q; i++) {
-		u64 rate = lookback_index(&md->lb_pacing_rate, i);
-		u64 delta = rate * md->alpha * error / total_norm;
+		s64 rate = lookback_index(&md->lb_pacing_rate, i);
+		s64 delta = rate * (s64) md->alpha * error / (s64) total_norm;
 
-		if (add)
-			md->b[i] += delta;
-		else if (md->b[i] > delta)
-			md->b[i] -= delta;
-		else
-			md->b[i] = 0;
+		md->b[i] += delta;
 	}
 
 exit:

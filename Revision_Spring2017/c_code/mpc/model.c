@@ -69,7 +69,7 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
 		size_t p, size_t q)
 {
-	int i;
+	size_t i;
 
 	md->psi = psi*MPC_ONE/100;
 	md->xi = xi*MPC_ONE/100;
@@ -85,8 +85,8 @@ void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
 	md->q = q;
 
 	md->alpha = alpha*MPC_ONE/100;
-	md->a = kmalloc(p*sizeof(u8), GFP_KERNEL);
-	md->b = kmalloc(q*sizeof(u8), GFP_KERNEL);
+	md->a = kmalloc(p*sizeof(s64), GFP_KERNEL);
+	md->b = kmalloc(q*sizeof(s64), GFP_KERNEL);
 
 	for (i = 0; i < p; i++)
 		md->a[i] = 0;

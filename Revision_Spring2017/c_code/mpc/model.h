@@ -40,8 +40,8 @@ struct model {
 
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
 	u8 alpha;
-	u8 *a;
-	u8 *b;
+	s64 *a;
+	s64 *b;
 
 	// us
 	struct lookback lb_rtt;
