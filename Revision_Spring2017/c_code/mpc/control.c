@@ -25,7 +25,7 @@ void control_update(struct model *md, u64 rtt_meas);
 u64 control_process(struct model *md, u64 rtt_meas, u64 rate)
 {
 	u64 b0 = md->b[0];
-	u64 rate_opt = lookback_index(&md->lb_pacing_rate, 0);
+	u64 rate_opt = *lookback_index(&md->lb_pacing_rate, 0);
 
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
@@ -38,8 +38,10 @@ u64 control_process(struct model *md, u64 rtt_meas, u64 rate)
 	md->avg_rtt_var = max_t(u64, 1, wma(md->gamma, md->avg_rtt_var,
 				square_diff_u64(md->predicted_rtt, md->avg_rtt)));
 
-	md->predicted_rtt = control_predict(md);
 
+	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
+	lookback_add(&md->lb_pacing_rate, 0);
+	md->predicted_rtt = control_predict(md);
 
 	if (rate > 0) {
 		rate_opt = rate;
@@ -69,7 +71,8 @@ u64 control_process(struct model *md, u64 rtt_meas, u64 rate)
 	rate_opt = min_t(u64, max_t(u64, rate_opt,
 			((u64) 100) << 17), ((u64) 1) << 32);
 
-	lookback_add(&md->lb_pacing_rate, rate_opt);
+	// Now we set predicted RTT to include the control.
+	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
 	md->predicted_rtt += b0 * rate_opt / MPC_ONE;
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
@@ -87,10 +90,10 @@ u64 control_predict(struct model *md)
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
-		predicted_rtt += md->a[i] * (s64) lookback_index(&md->lb_rtt, i) / MPC_ONE;
+		predicted_rtt += md->a[i] * (s64) *lookback_index(&md->lb_rtt, i) / MPC_ONE;
 
 	for (i = 0; i < md->q; i++)
-		predicted_rtt += md->b[i] * (s64) lookback_index(&md->lb_pacing_rate, i) / MPC_ONE;
+		predicted_rtt += md->b[i] * (s64) *lookback_index(&md->lb_pacing_rate, i) / MPC_ONE;
 
 	return predicted_rtt;
 }
@@ -106,7 +109,7 @@ void control_update(struct model *md, u64 rtt_meas)
 
 
 	for (i = 0; i < md->p; i++) {
-		u64 rtt = lookback_index(&md->lb_rtt, i);
+		u64 rtt = *lookback_index(&md->lb_rtt, i);
 		total_norm += rtt*rtt;
 
 		// Limit to prevent overflow.
@@ -117,7 +120,7 @@ void control_update(struct model *md, u64 rtt_meas)
 	}
 
 	for (i = 0; i < md->q; i++) {
-		u64 rate = lookback_index(&md->lb_pacing_rate, i);
+		u64 rate = *lookback_index(&md->lb_pacing_rate, i);
 
 		if (total_norm > S64_MAX - rate*rate)
 			total_norm = S64_MAX;
@@ -133,14 +136,14 @@ void control_update(struct model *md, u64 rtt_meas)
 
 	for (i = 0; i < md->p; i++) {
 		// FIXME: This overflows.
-		s64 rtt = lookback_index(&md->lb_rtt, i);
+		s64 rtt = *lookback_index(&md->lb_rtt, i);
 		s64 delta = rtt * (s64) md->alpha * error / (s64) total_norm;
 
 		md->a[i] += delta;
 	}
 
 	for (i = 0; i < md->q; i++) {
-		s64 rate = lookback_index(&md->lb_pacing_rate, i);
+		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
 		s64 delta = rate * (s64) md->alpha * error / (s64) total_norm;
 
 		md->b[i] += delta;
