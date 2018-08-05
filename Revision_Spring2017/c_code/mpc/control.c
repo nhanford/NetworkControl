@@ -141,7 +141,7 @@ void control_update(struct model *md, u64 rtt_meas)
 		if (add)
 			md->a[i] += delta;
 		else if (md->a[i] > delta)
-			md->a[i] += delta;
+			md->a[i] -= delta;
 		else
 			md->a[i] = 0;
 	}
@@ -153,7 +153,7 @@ void control_update(struct model *md, u64 rtt_meas)
 		if (add)
 			md->b[i] += delta;
 		else if (md->b[i] > delta)
-			md->b[i] += delta;
+			md->b[i] -= delta;
 		else
 			md->b[i] = 0;
 	}
