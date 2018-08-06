@@ -11,6 +11,6 @@
 //
 // @param rtt_meas RTT measured in us.
 // @param rate The pacing rate to set measured in bytes/s.
-u64 control_process(struct model *md, u64 rtt_meas, u64 rate);
+s64 control_process(struct model *md, s64 rtt_meas, s64 rate);
 
 #endif /* end of include guard: CONTROL_H */
