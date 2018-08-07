@@ -11,6 +11,19 @@ static DEFINE_SPINLOCK(dfs_lock);
 static unsigned long long dfs_id = 0;
 
 
+static int debugfs_s64_set(void *data, u64 val)
+{
+	*(s64 *)data = val;
+	return 0;
+}
+static int debugfs_s64_get(void *data, u64 *val)
+{
+	*val = *(s64 *)data;
+	return 0;
+}
+DEFINE_DEBUGFS_ATTRIBUTE(fops_s64, debugfs_s64_get, debugfs_s64_set, "%lld\n");
+
+
 void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 {
 	// We need to create a unique name for each DFS since multiple instances may
@@ -41,12 +54,12 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	if (dstats->dir == NULL) {
 		mpc_log("Failed to create debugfs directory.\n");
 	} else {
-		debugfs_create_u64("rtt_meas_us", 0444, dstats->dir,
-				&dstats->rtt_meas_us);
-		debugfs_create_u64("rtt_pred_us", 0444, dstats->dir,
-				&dstats->rtt_pred_us);
-		debugfs_create_u64("rate_set", 0444, dstats->dir,
-				&dstats->rate_set);
+		debugfs_create_file("rtt_meas_us", 0444, dstats->dir,
+				&dstats->rtt_meas_us, &fops_s64);
+		debugfs_create_file("rtt_pred_us", 0444, dstats->dir,
+				&dstats->rtt_pred_us, &fops_s64);
+		debugfs_create_file("rate_set", 0444, dstats->dir,
+				&dstats->rate_set, &fops_s64);
 		debugfs_create_bool("probing", 0444, dstats->dir,
 				&dstats->probing);
 		dfs_id = (dfs_id + 1) % ULLONG_MAX;
@@ -66,7 +79,7 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, u8 psi, u8 xi, u8 gamma, u8 alpha,
+void model_init(struct model *md, s8 psi, s8 xi, s8 gamma, s8 alpha,
 		size_t p, size_t q)
 {
 	size_t i;

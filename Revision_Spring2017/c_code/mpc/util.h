@@ -12,7 +12,7 @@
 
 #define MPC_ONE 128
 
-static inline u64 wma(u64 weight, u64 avg, u64 x)
+static inline s64 wma(s64 weight, s64 avg, s64 x)
 {
 	return (MPC_ONE - weight)*avg/MPC_ONE + weight*x/MPC_ONE;
 }
