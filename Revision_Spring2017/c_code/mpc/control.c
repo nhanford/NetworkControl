@@ -4,11 +4,6 @@
 #include "control.h"
 #include "util.h"
 
-inline s64 sqr(s64 x)
-{
-	return x*x;
-}
-
 // (x - y)^2
 inline s64 sqr_diff_s64(s64 x, s64 y)
 {
@@ -54,10 +49,11 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		md->dstats.probing = true;
 	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0) {
-		s64 t1 = sqr(b0) / 4;
-		s64 t2 = sqr(md->avg_pacing_rate) / sqr(md->avg_rtt);
+		s64 t1 = b0 / 2;
+		s64 t2 = md->avg_pacing_rate / md->avg_rtt;
 
 		rate_opt = t1*t2;
+		rate_opt *= rate_opt;
 
 		md->dstats.probing = false;
 	}
