@@ -49,10 +49,11 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		md->dstats.probing = true;
 	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0) {
-		s64 t1 = b0 / 2;
-		s64 t2 = md->avg_pacing_rate / md->avg_rtt;
+		s64 t1 = (MPC_ONE - md->alpha)/md->alpha;
+		s64 t2 = b0 / 2;
+		s64 t3 = md->avg_pacing_rate / md->avg_rtt;
 
-		rate_opt = t1*t2;
+		rate_opt = t1*t2*t3;
 		rate_opt *= rate_opt;
 
 		md->dstats.probing = false;
@@ -80,7 +81,6 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 s64 control_predict(struct model *md)
 {
 	s64 predicted_rtt = 0;
-	s64 last_rtt = *lookback_index(&md->lb_rtt, 0);
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++) {

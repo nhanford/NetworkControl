@@ -13,13 +13,13 @@ static unsigned long long dfs_id = 0;
 
 static int debugfs_s64_set(void *data, u64 val)
 {
-        *(s64 *)data = val;
-        return 0;
+	*(s64 *)data = val;
+	return 0;
 }
 static int debugfs_s64_get(void *data, u64 *val)
 {
-        *val = *(s64 *)data;
-        return 0;
+	*val = *(s64 *)data;
+	return 0;
 }
 DEFINE_DEBUGFS_ATTRIBUTE(fops_s64, debugfs_s64_get, debugfs_s64_set, "%lld\n");
 
@@ -79,11 +79,12 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s8 gamma, size_t p, size_t q)
+void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q)
 {
 	size_t i;
 
 	md->gamma = gamma*MPC_ONE/100;
+	md->alpha = alpha*MPC_ONE/100;
 
 	md->avg_rtt = 0;
 	md->avg_rtt_var = 0;

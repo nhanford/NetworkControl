@@ -21,7 +21,8 @@ struct mpc_dfs_stats {
 
 struct model {
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s8 gamma;
+	s32 gamma;
+	s32 alpha;
 
 	// us
 	s64 avg_rtt;
@@ -51,7 +52,7 @@ struct model {
 };
 
 // psi, xi, gamma, and alpha are percentages.
-void model_init(struct model *md, s8 gamma, size_t p, size_t q);
+void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q);
 
 void model_release(struct model *md);
 
