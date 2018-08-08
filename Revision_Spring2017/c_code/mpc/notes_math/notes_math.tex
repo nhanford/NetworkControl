@@ -75,20 +75,18 @@ be the current time.
     &= l
 \end{align*}
 
-Considering the control $r = r(N)$, we want to minimize
+Considering the control $r(N)$, we want to maximize
 
 \begin{align*}
-    \frac{(1 - \alpha) \hat{l}(N)}{\mu_l(N)} - \frac{\alpha r}{\mu_r(N - 1)} &=
-    \frac{1 - \alpha}{\mu_l(N)} \del{\sum_{i = 0}^p a_i \sqrt{l(N - i)} + \sum_{j = 0}^q b_j \sqrt{r(N - j)}}
-    - \frac{\alpha r}{\mu_r(N - 1)}\\
-    &= \frac{(1 - \alpha) b_0 \sqrt{r(N)}}{\mu_l(N)} - \frac{\alpha r}{\mu_r(N - 1)}\\
-    &\qquad + \frac{1 - \alpha}{\mu_l(N)} \del{\sum_{i = 0}^p a_i \sqrt{l(N - i)} + \sum_{j = 1}^q b_j \sqrt{r(N - j)}}\\
-    &= \frac{(1 - \alpha) b_0 \sqrt{r(N)}}{\mu_l(N)} - \frac{\alpha r}{\mu_r(N - 1)} +
-    \frac{(1 - \alpha) \sbr{\hat{l}}_{r(N) = 0}}{\mu_l(N)}\\
+    m(r(N)) &= \frac{\alpha r}{\mu_r(N - 1)} - \frac{(1 - \alpha) \hat{l}(N)}{\mu_l(N)}\\
+    &= \frac{(1 - \alpha) r}{\mu_r(N - 1)}
+    - \frac{(1 - \alpha) b_0 \sqrt{r(N)}}{\mu_l(N)}
+    - \frac{1 - \alpha}{\mu_l(N)} \sbr{\hat{l}(N)}_{r(N) = 0}\\
     \\
-    \dod{}{r} (\hat{l}(N) - r) &= 0\\
-    \frac{(1 - \alpha) b_0}{2 \mu_l(N) \sqrt{r}} - \frac{\alpha}{\mu_r(N - 1)} &= 0\\
-    r &= \del{\frac{(1 - \alpha) b_0 \mu_r(N - 1)}{2 \alpha \mu_l(N)}}^2
+    \dod{}{r(N)} m(r(N)) &= 0\\
+    \frac{\alpha}{\mu_r(N - 1)} - \frac{(1 - \alpha) b_0}{2\mu_l(N) \sqrt{r(N)}} &= 0\\
+    \sqrt{r(N)} &= \frac{(1 - \alpha) b_0 \mu_r(N - 1)}{2 \alpha \mu_l(N)}\\
+    r(N) &= \del{\frac{(1 - \alpha) b_0 \mu_r(N - 1)}{2 \alpha \mu_l(N)}}^2
 \end{align*}
 
 $\alpha$ is a parameter that weighs which parameter we want to minimize more.
