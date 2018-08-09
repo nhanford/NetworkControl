@@ -93,7 +93,7 @@ if args.limit_quantile is not None:
     if len(mpcRTT_adj) > 0:
         q1 = mpcRTT_adj.quantile(args.limit_quantile)
         q2 = mpcRTTPred_adj.quantile(args.limit_quantile)
-        ax6.set_ylim(0, max(q1, q2)*2)
+        ax6.set_ylim(0, min(q1, q2)*2)
 
     if len(mpcRate_adj) > 0:
         ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
