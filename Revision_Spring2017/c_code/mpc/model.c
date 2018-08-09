@@ -79,7 +79,7 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s8 psi, s8 xi, s8 gamma, s8 alpha,
+void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 		size_t p, size_t q)
 {
 	size_t i;
