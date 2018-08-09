@@ -6,3 +6,7 @@
 
 # Python stuff.
 *.pyc
+
+# C build files.
+*.o
+*.ko
