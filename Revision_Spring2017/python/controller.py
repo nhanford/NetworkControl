@@ -1,84 +1,111 @@
 ################################################################################
 #
-# Author: David Fridovich-Keil ( dfk@eecs.berkeley.edu )
+# Author: Taran Lynn ( tflynn@ucdavis.edu ), based on work by
+#          David Fridovich-Keil ( dfk@eecs.berkeley.edu )
 # File: controller.py
-#
-# Controller implementation. The controller holds an adaptive filter inside
-# which constantly updates its internal predictive model as new data arrives.
 #
 ################################################################################
 
-from adaptive_filter import AdaptiveFilter
-
+from collections import deque
+from math import sqrt
 import numpy as np
+import random
+
+
+def wma(a, x, y):
+    return (1 - a)*x + a*y
+
 
 class Controller:
+    def __init__(self, gamma, alpha, p, q):
+        self.gamma = gamma
+        self.alpha = alpha
 
-    def __init__(self, psi, xi, gamma, p, q, alpha):
-        """ Constructor. """
-
-        self.psi_ = psi # Coefficient of variance term.
-        self.xi_ = xi # Coefficient of throughput term.
-        self.gamma_ = gamma # Parameter in nominal latency estimator.
+        self.rand = random.Random()
 
         # Estimated nominal latency.
-        self.mu_latency_ = 0.0
-        self.mu_variance_ = 0.0
-        self.mu_control_ = 1.0
+        self.avg_rtt = 0.0
+        self.avg_rtt_var = 0.0
+        self.avg_rate = 0.0
 
-        # Keep an adaptive filter as the dynamics model.
-        self.model_ = AdaptiveFilter(p, q, alpha)
+        self.p = p
+        self.q = q
 
-        # Most recent prediction.
-        self.l_hat_ = self.model_.Predict()
+        self.a = p*[0]
+        self.b = q*[0]
 
-    def Process(self, l, r = None):
-        """
-        Process a new latency/control pair. Two steps:
-        (1) updates internal model, and
-        (2) computes optimal control.
-        """
+        self.lb_rtt = deque(p*[0], p)
+        self.lb_rate = deque(q*[0], q)
 
-        # (1) Update internal model.
-        self.model_.Update(l, self.l_hat_)
+        self.predicted_rtt = self.predict()
 
-        self.mu_latency_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_latency_
-        self.mu_variance_ = ((1.0 - self.gamma_) * (self.l_hat_ - self.mu_latency_)**2 +
-                             self.gamma_ * self.mu_variance_)
 
-        # (2) Compute optimal control.
-        self.l_hat_ = self.model_.Predict(0.0, True)
+    def process(self, rtt_meas, rate = 0):
+        rate_opt = self.lb_rate[0]
 
-        # Normalize coefficients before solving for optimal control.
-        psi = self.psi_ / self.mu_variance_
-        xi = self.xi_ / self.mu_control_
-        b0 = self.model_.b_[0]
+        self.update(rtt_meas)
+        b0 = self.b[0]
 
-        r_opt = ((xi - b0 / self.mu_latency_) * (0.5 / (psi * b0)) +
-                 self.mu_latency_ - self.l_hat_) / b0
+        self.avg_rtt = max(1, wma(self.gamma, self.avg_rtt, rtt_meas))
 
-        """
-        (self.mu_ - self.l_hat_ +
-                 ((self.xi_ - self.model_.b_[0]) /
-                  (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0]
-        """
+        self.avg_rtt_var = max(1, wma(self.gamma, self.avg_rtt_var,
+            (self.predicted_rtt - self.avg_rtt)**2))
 
-        # Threshold the output.
-        # TODO! Make these bounds less arbitrary.
-        r_opt = max(0.1, min(r_opt, 34.35))
 
-        if r is not None:
-            self.model_.r_.appendleft(r)
-            self.l_hat_ += self.model_.b_[0] * r
+        self.lb_rate.appendleft(0)
+
+        if rate > 0:
+            rate_opt = rate
         else:
-            self.model_.r_.appendleft(r_opt)
-            self.l_hat_ += self.model_.b_[0] * r_opt
+            t1 = (1 - self.alpha)/self.alpha
+            t2 = b0 / 2
+            t3 = self.avg_rate / self.avg_rtt
 
-        # Update control mean.
-        if r is not None:
-            self.mu_control_ = (1.0 - self.gamma_) * r + self.gamma_ * self.mu_control_
-        else:
-            self.mu_control_ = (1.0 - self.gamma_) * r_opt + self.gamma_ * self.mu_control_
+            rate_opt = t1*t2*t3
+            rate_opt *= rate_opt
 
-        # Return both optimal control and predicted latency.
-        return (r_opt, self.l_hat_)
+        rate_opt = max(0.1, rate_opt)
+
+        # Now we set predicted RTT to include the control.
+        self.lb_rate[0] = rate_opt
+        self.predicted_rtt = self.predict()
+
+        self.avg_rate = wma(self.gamma, self.avg_rate, rate_opt)
+
+        return (rate_opt, self.predicted_rtt)
+
+
+    def predict(self):
+        predicted_rtt = 0
+
+        for i in range(0, self.p):
+            rttRt = sqrt(self.lb_rtt[i])
+            predicted_rtt += self.a[i] * rttRt
+
+        for i in range(0, self.q):
+            rateRt = sqrt(self.lb_rate[i])
+            predicted_rtt += self.b[i] * rateRt
+
+        return max(0, predicted_rtt)
+
+
+    def update(self, rtt_meas):
+        sum_lb = sum(self.lb_rtt) + sum(self.lb_rate)
+        error = rtt_meas - self.predicted_rtt
+
+        if sum_lb == 0:
+            return
+
+        for i in range(0, self.p):
+            rttRt = sqrt(self.lb_rtt[i])
+            delta = rttRt * error / sum_lb
+            self.a[i] += delta
+            print("a[{}] = {}".format(i, self.a[i]))
+
+        for i in range(0, self.q):
+            rateRt = sqrt(self.lb_rate[i])
+            delta = rateRt * error / sum_lb
+            self.b[i] += delta
+            print("b[{}] = {}".format(i, self.b[i]))
+
+        self.lb_rtt.appendleft(rtt_meas)

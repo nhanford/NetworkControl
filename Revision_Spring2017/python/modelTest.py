@@ -17,14 +17,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 # Adaptive filter parameters.
-ALPHA = 0.5
 P = 5
 Q = 1
 
 # Controller parameters.
-PSI = 1.0
-XI = 0.1
 GAMMA = 0.5
+ALPHA = 0.5
 
 NUM_DATA_POINTS = 200
 
@@ -40,7 +38,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
+        controller = Controller(GAMMA, ALPHA, P, Q)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
@@ -51,7 +49,7 @@ class Tester:
         for i in range(1, NUM_DATA_POINTS):
             recorded_latency[i] = response.generate(recorded_rate[i - 1])
 
-            (last_rate, predicted_latency[i]) = rateler.Process(recorded_latency[i])
+            (last_rate, predicted_latency[i]) = controller.process(recorded_latency[i])
             recorded_rate[i] = last_rate
 
         plt.figure(self.plotCount_)
@@ -131,6 +129,22 @@ class VarRatePenalizer:
             self.lastRate_ = rate
             return self.response_.generate(rate) + addedLat
 
+class SlowFast:
+    """
+    """
+
+
+    def __init__(self, bestLatency, optimumRate, rateSensitivity):
+        self.bestLat_ = bestLatency
+        self.optRate_ = optimumRate
+        self.rateSens_ = rateSensitivity
+
+    def generate(self, rate):
+        if rate < self.optRate_:
+            return self.bestLat_
+        else:
+            return self.bestLat_ + self.rateSens_ * (rate - self.optRate_)
+
 class LatencyGenerator:
     """
     Latency generator implemented by David Fridovich.
@@ -162,22 +176,27 @@ if __name__ == "__main__":
 
     # Constant latency feedback. Could represent a high performance network that
     # works as fast as possible no matter the rate.
-    tester.test(Constant(5), "Constant Latency")
+    #tester.test(Constant(5), "Constant Latency")
 
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
-    tester.test(Offset(10, 5, 2), "Offset Latency")
+    #tester.test(Offset(10, 5, 2), "Offset Latency")
 
     # Model for when consistency is desired.
-    tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
-            "Offset Latency with Penalized Rate Changes")
+    #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
+    #        "Offset Latency with Penalized Rate Changes")
 
     # Here we switch from offset to constant halfway through. The idea is that
     # this could mimic a probing mode as suggested by Nate.
-    tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
-            "Switch Offset to Constant Latency")
+    #tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
+    #        "Switch Offset to Constant Latency")
 
-    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
-            "Fridovich's Original Model")
+    # Here we model a network whose latency is best at a certain rate, with no
+    # other considerations.
+    tester.test(SlowFast(10, 5, 2), "Slow Fast")
+
+
+    #tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
+    #        "Fridovich's Original Model")
 
     tester.results()
