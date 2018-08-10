@@ -90,10 +90,10 @@ s64 control_predict(struct model *md)
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
-		predicted_rtt += md->a[i] * (s64) *lookback_index(&md->lb_rtt, i) / MPC_ONE;
+		predicted_rtt += md->a[i] * (*lookback_index(&md->lb_rtt, i)) / MPC_ONE;
 
 	for (i = 0; i < md->q; i++)
-		predicted_rtt += md->b[i] * (s64) *lookback_index(&md->lb_pacing_rate, i) / MPC_ONE;
+		predicted_rtt += md->b[i] * (*lookback_index(&md->lb_pacing_rate, i)) / MPC_ONE;
 
 	return predicted_rtt;
 }
