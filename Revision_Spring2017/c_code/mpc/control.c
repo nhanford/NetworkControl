@@ -110,7 +110,6 @@ void control_update(struct model *md, s64 rtt_meas)
 
 	for (i = 0; i < md->p; i++) {
 		s64 rtt = *lookback_index(&md->lb_rtt, i);
-		total_norm += rtt*rtt;
 
 		// Limit to prevent overflow.
 		if (total_norm > S64_MAX - rtt*rtt)
