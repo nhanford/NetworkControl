@@ -54,8 +54,7 @@ struct model {
 };
 
 // psi, xi, gamma, and alpha are percentages.
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q);
+void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q);
 
 void model_release(struct model *md);
 

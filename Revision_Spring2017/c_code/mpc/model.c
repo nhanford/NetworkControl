@@ -104,10 +104,10 @@ void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q)
 		md->b[i] = 0;
 
 	md->last_rtt = 0;
-	lookback_init(&md->lb_rtt, p, 0);
+	lookback_init(&md->lb_rtt_diff, p, 0);
 
 	md->last_rate = 0;
-	lookback_init(&md->lb_pacing_rate, q, 0);
+	lookback_init(&md->lb_rate_diff, q, 0);
 
 	mpc_dfs_init(&md->dstats);
 }
@@ -117,8 +117,8 @@ void model_release(struct model *md)
 	kfree(md->a);
 	kfree(md->b);
 
-	lookback_release(&md->lb_rtt);
-	lookback_release(&md->lb_pacing_rate);
+	lookback_release(&md->lb_rtt_diff);
+	lookback_release(&md->lb_rate_diff);
 
 	mpc_dfs_release(&md->dstats);
 }

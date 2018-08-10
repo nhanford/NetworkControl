@@ -25,7 +25,7 @@ void control_update(struct model *md, s64 rtt_meas);
 s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 {
 	s64 b0 = md->b[0];
-	s64 rate_opt = *lookback_index(&md->lb_pacing_rate, 0);
+	s64 rate_opt = md->last_rtt;
 
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
@@ -40,7 +40,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 
 	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
-	lookback_add(&md->lb_pacing_rate, 0);
+	lookback_add(&md->lb_rate_diff, 0);
 	md->predicted_rtt = control_predict(md);
 
 	if (rate > 0) {
@@ -64,9 +64,9 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 			((s64) 100) << 17), ((s64) 1) << 32);
 
 	// Now we set predicted RTT to include the control.
-	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt - md->last_rate;
+	*lookback_index(&md->lb_rate_diff, 0) = rate_opt - md->last_rate;
 	md->last_rate = rate_opt;
-	md->predicted_rtt += b0 * (*lookback_index(&md->lb_pacing_rate, 0)) / MPC_ONE;
+	md->predicted_rtt += b0 * (*lookback_index(&md->lb_rate_diff, 0)) / MPC_ONE;
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
 
@@ -117,7 +117,7 @@ void control_update(struct model *md, s64 rtt_meas)
 		if (total_norm > S64_MAX - rate_diff*rate_diff)
 			total_norm = S64_MAX;
 		else
-			total_norm += rate*rate;
+			total_norm += rate_diff*rate_diff;
 	}
 
 	total_norm = max_t(s64, 1, total_norm);
@@ -142,6 +142,6 @@ void control_update(struct model *md, s64 rtt_meas)
 	}
 
 exit:
-	lookback_add(&md->lb_rtt, rtt_meas - md->lb_rtt);
-	md->lb_rtt = rtt_meas;
+	lookback_add(&md->lb_rtt_diff, rtt_meas - md->last_rtt);
+	md->last_rtt = rtt_meas;
 }
