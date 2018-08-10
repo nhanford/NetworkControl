@@ -79,13 +79,10 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q)
+void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q)
 {
 	size_t i;
 
-	md->psi = psi*MPC_ONE/100;
-	md->xi = xi*MPC_ONE/100;
 	md->gamma = gamma*MPC_ONE/100;
 
 	md->avg_rtt = 0;
@@ -106,7 +103,10 @@ void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 	for (i = 0; i < q; i++)
 		md->b[i] = 0;
 
+	md->last_rtt = 0;
 	lookback_init(&md->lb_rtt, p, 0);
+
+	md->last_rate = 0;
 	lookback_init(&md->lb_pacing_rate, q, 0);
 
 	mpc_dfs_init(&md->dstats);

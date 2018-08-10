@@ -21,8 +21,6 @@ struct mpc_dfs_stats {
 
 struct model {
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s32 psi;
-	s32 xi;
 	s32 gamma;
 
 	// us
@@ -44,10 +42,12 @@ struct model {
 	s64 *b;
 
 	// us
-	struct lookback lb_rtt;
+	s64 last_rtt;
+	struct lookback lb_rtt_diff;
 
 	// B/s
-	struct lookback lb_pacing_rate;
+	s64 last_rate;
+	struct lookback lb_rate_diff;
 
 	// For debugging.
 	struct mpc_dfs_stats dstats;

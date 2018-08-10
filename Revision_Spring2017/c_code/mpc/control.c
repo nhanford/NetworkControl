@@ -48,19 +48,11 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		md->dstats.probing = true;
 	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0 && b0 > 0) {
-		// NOTE: Make sure MPC_ONE offsets anything scaled by it. psi, xi,
-		// gamma, alpha, a[*], b[*].
-		s64 cd = 2*b0*md->psi/MPC_ONE;
-		s64 t1 = md->avg_rtt_var * md->xi
-			/ (cd * b0 * md->avg_pacing_rate) * MPC_ONE;
-		s64 t2 = md->avg_rtt / b0 * MPC_ONE;
-		s64 t3 = md->avg_rtt_var / (cd * md->avg_rtt) * MPC_ONE;
-		s64 t4 = md->predicted_rtt / b0 * MPC_ONE;
-		s64 t5 = t1 + t2;
-		s64 t6 = t3 + t4;
+		s64 ml = md->avg_rtt;
+		s64 mr = md->avg_pacing_rate;
+		s64 lh = md->predicted_rtt;
 
-		if (t5 > t6)
-			rate_opt = t5 - t6;
+		rate_opt = (b0*mr/(ml*ml - b0*b0*mr)) * mr*lh;
 
 		md->dstats.probing = false;
 	}
@@ -72,8 +64,9 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 			((s64) 100) << 17), ((s64) 1) << 32);
 
 	// Now we set predicted RTT to include the control.
-	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
-	md->predicted_rtt += b0 * rate_opt / MPC_ONE;
+	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt - md->last_rate;
+	md->last_rate = rate_opt;
+	md->predicted_rtt += b0 * (*lookback_index(&md->lb_pacing_rate, 0)) / MPC_ONE;
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
 
@@ -90,10 +83,10 @@ s64 control_predict(struct model *md)
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
-		predicted_rtt += md->a[i] * (*lookback_index(&md->lb_rtt, i)) / MPC_ONE;
+		predicted_rtt += md->a[i] * (*lookback_index(&md->lb_rtt_diff, i)) / MPC_ONE;
 
 	for (i = 0; i < md->q; i++)
-		predicted_rtt += md->b[i] * (*lookback_index(&md->lb_pacing_rate, i)) / MPC_ONE;
+		predicted_rtt += md->b[i] * (*lookback_index(&md->lb_rate_diff, i)) / MPC_ONE;
 
 	return predicted_rtt;
 }
@@ -109,20 +102,19 @@ void control_update(struct model *md, s64 rtt_meas)
 
 
 	for (i = 0; i < md->p; i++) {
-		s64 rtt = *lookback_index(&md->lb_rtt, i);
-		total_norm += rtt*rtt;
+		s64 rtt_diff = *lookback_index(&md->lb_rtt_diff, i);
 
 		// Limit to prevent overflow.
-		if (total_norm > S64_MAX - rtt*rtt)
+		if (total_norm > S64_MAX - rtt_diff*rtt_diff)
 			total_norm = S64_MAX;
 		else
-			total_norm += rtt*rtt;
+			total_norm += rtt_diff*rtt_diff;
 	}
 
 	for (i = 0; i < md->q; i++) {
-		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
+		s64 rate_diff = *lookback_index(&md->lb_rate_diff, i);
 
-		if (total_norm > S64_MAX - rate*rate)
+		if (total_norm > S64_MAX - rate_diff*rate_diff)
 			total_norm = S64_MAX;
 		else
 			total_norm += rate*rate;
@@ -136,19 +128,20 @@ void control_update(struct model *md, s64 rtt_meas)
 
 	for (i = 0; i < md->p; i++) {
 		// FIXME: This overflows.
-		s64 rtt = *lookback_index(&md->lb_rtt, i);
-		s64 delta = rtt * md->alpha * error / total_norm;
+		s64 rtt_diff = *lookback_index(&md->lb_rtt_diff, i);
+		s64 delta = rtt_diff * md->alpha * error / total_norm;
 
 		md->a[i] += delta;
 	}
 
 	for (i = 0; i < md->q; i++) {
-		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
-		s64 delta = rate * md->alpha * error / total_norm;
+		s64 rate_diff = *lookback_index(&md->lb_rate_diff, i);
+		s64 delta = rate_diff * md->alpha * error / total_norm;
 
 		md->b[i] += delta;
 	}
 
 exit:
-	lookback_add(&md->lb_rtt, rtt_meas);
+	lookback_add(&md->lb_rtt, rtt_meas - md->lb_rtt);
+	md->lb_rtt = rtt_meas;
 }
