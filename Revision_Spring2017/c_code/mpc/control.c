@@ -79,7 +79,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 s64 control_predict(struct model *md)
 {
-	s64 predicted_rtt = 0;
+	s64 predicted_rtt = md->avg_pacing_rate;
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
