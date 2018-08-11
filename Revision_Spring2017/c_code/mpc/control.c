@@ -52,7 +52,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		s64 mr = md->avg_pacing_rate;
 		s64 lh = md->predicted_rtt;
 
-		rate_opt = (b0*mr/(ml*ml - b0*b0*mr)) * mr*lh;
+		rate_opt += (lh*mr/(ml*ml - b0*b0*mr)) * b0*mr;
 
 		md->dstats.probing = false;
 	}
@@ -79,7 +79,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 s64 control_predict(struct model *md)
 {
-	s64 predicted_rtt = md->avg_pacing_rate;
+	s64 predicted_rtt = md->avg_rtt;
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
@@ -127,7 +127,6 @@ void control_update(struct model *md, s64 rtt_meas)
 		goto exit;
 
 	for (i = 0; i < md->p; i++) {
-		// FIXME: This overflows.
 		s64 rtt_diff = *lookback_index(&md->lb_rtt_diff, i);
 		s64 delta = rtt_diff * md->alpha * error / total_norm;
 
