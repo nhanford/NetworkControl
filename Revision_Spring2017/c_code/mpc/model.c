@@ -89,6 +89,7 @@ void model_init(struct model *md, s32 gamma, s32 alpha, size_t p, size_t q)
 	md->avg_rtt_var = 0;
 	md->avg_pacing_rate = 0;
 
+	md->target_rtt = 0;
 	md->predicted_rtt = 0;
 
 	md->p = p;

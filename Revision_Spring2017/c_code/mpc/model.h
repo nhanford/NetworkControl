@@ -31,6 +31,7 @@ struct model {
 	s64 avg_pacing_rate;
 
 	// us
+	s64 target_rtt;
 	s64 predicted_rtt;
 
 	size_t p;

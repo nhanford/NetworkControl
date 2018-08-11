@@ -79,7 +79,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 s64 control_predict(struct model *md)
 {
-	s64 predicted_rtt = md->avg_rtt;
+	s64 predicted_rtt = md->target_rtt;
 	size_t i = 0;
 
 	for (i = 0; i < md->p; i++)
@@ -95,11 +95,11 @@ s64 control_predict(struct model *md)
 void control_update(struct model *md, s64 rtt_meas)
 {
 	size_t i;
-	s64 error;
+	s64 error = rtt_meas - md->predicted_rtt;
 	s64 total_norm = 0;
 
-	error = rtt_meas - md->predicted_rtt;
-
+	if (md->target_rtt <= 0 || (rtt_meas > 0 && rtt_meas < md->target_rtt))
+		md->target_rtt = rtt_meas;
 
 	for (i = 0; i < md->p; i++) {
 		s64 rtt_diff = *lookback_index(&md->lb_rtt_diff, i);
