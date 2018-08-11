@@ -73,7 +73,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 	// Now we set predicted RTT to include the control.
 	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
-	md->predicted_rtt += control_predict(md);
+	md->predicted_rtt = control_predict(md);
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
 
