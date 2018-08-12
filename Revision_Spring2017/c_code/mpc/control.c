@@ -4,17 +4,9 @@
 #include "control.h"
 #include "util.h"
 
-// (x - y)^2
-inline s64 square_diff_s64(s64 x, s64 y)
+inline s64 sqr(s64 x)
 {
-	s64 diff;
-
-	if (x > y)
-		diff = x - y;
-	else
-		diff = y - x;
-
-	return diff * diff;
+	return x*x;
 }
 
 
@@ -27,6 +19,9 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	s64 b0 = md->b[0];
 	s64 rate_opt = md->last_rtt;
 
+	// Convert for internal units.
+	rate >>= 20;
+
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
 	md->dstats.rtt_pred_us = md->predicted_rtt;
@@ -36,7 +31,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	md->avg_rtt = max_t(s64, 1, wma(md->gamma, md->avg_rtt, rtt_meas));
 
 	md->avg_rtt_var = max_t(s64, 1, wma(md->gamma, md->avg_rtt_var,
-				square_diff_s64(md->predicted_rtt, md->avg_rtt)));
+				sqr(md->predicted_rtt - md->avg_rtt)));
 
 
 	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
@@ -52,7 +47,11 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		s64 mr = md->avg_pacing_rate;
 		s64 lh = md->predicted_rtt;
 
-		rate_opt += (lh*mr/(ml*ml - b0*b0*mr)) * b0*mr;
+		s64 b02 = b0*b0;
+		s64 ml2 = ml*ml;
+		s64 mr2 = mr*mr;
+
+		rate_opt += ml2*mr/(2*b02*mr + 2*ml2) - lh/(b0 + ml2/(b0*mr2));
 
 		md->dstats.probing = false;
 	}
@@ -61,7 +60,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	// TODO: Make bounds less arbitrary than 100 mbit/s. 1 << 32 is to limit
 	// overflows.
 	rate_opt = min_t(s64, max_t(s64, rate_opt,
-			((s64) 100) << 17), ((s64) 1) << 32);
+			100/8), (1 << 10)/8);
 
 	// Now we set predicted RTT to include the control.
 	*lookback_index(&md->lb_rate_diff, 0) = rate_opt - md->last_rate;
@@ -69,6 +68,10 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	md->predicted_rtt = control_predict(md);
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
+
+
+	// Convert to external units.
+	rate_opt <<= 20;
 
 	// debug
 	md->dstats.rate_set = rate_opt;
@@ -97,9 +100,6 @@ void control_update(struct model *md, s64 rtt_meas)
 	size_t i;
 	s64 error = rtt_meas - md->predicted_rtt;
 	s64 total_norm = 0;
-
-	if (md->target_rtt <= 0 || (rtt_meas > 0 && rtt_meas < md->target_rtt))
-		md->target_rtt = rtt_meas;
 
 	for (i = 0; i < md->p; i++) {
 		s64 rtt_diff = *lookback_index(&md->lb_rtt_diff, i);

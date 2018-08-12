@@ -27,7 +27,7 @@ struct model {
 	s64 avg_rtt;
 	s64 avg_rtt_var;
 
-	// B/s
+	// MB/s
 	s64 avg_pacing_rate;
 
 	// us
@@ -46,7 +46,7 @@ struct model {
 	s64 last_rtt;
 	struct lookback lb_rtt_diff;
 
-	// B/s
+	// MB/s
 	s64 last_rate;
 	struct lookback lb_rate_diff;
 
