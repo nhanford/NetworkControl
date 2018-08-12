@@ -29,7 +29,7 @@ struct model {
 	s64 avg_rtt;
 	s64 avg_rtt_var;
 
-	// B/s
+	// MB/s
 	s64 avg_pacing_rate;
 
 	// us
@@ -46,7 +46,7 @@ struct model {
 	// us
 	struct lookback lb_rtt;
 
-	// B/s
+	// MB/s
 	struct lookback lb_pacing_rate;
 
 	// For debugging.

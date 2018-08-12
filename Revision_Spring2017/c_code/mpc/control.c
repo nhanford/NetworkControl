@@ -27,6 +27,9 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	s64 b0 = md->b[0];
 	s64 rate_opt = *lookback_index(&md->lb_pacing_rate, 0);
 
+	// Convert for internal units.
+	rate >>= 20;
+
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
 	md->dstats.rtt_pred_us = md->predicted_rtt;
@@ -66,16 +69,18 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	}
 
 	// Clamp rate
-	// TODO: Make bounds less arbitrary than 100 mbit/s. 1 << 32 is to limit
+	// TODO: Make bounds less arbitrary than 1 mbit/s. 100 gbit/s is to limit
 	// overflows.
-	rate_opt = min_t(s64, max_t(s64, rate_opt,
-			((s64) 100) << 17), ((s64) 1) << 32);
+	rate_opt = min_t(s64, max_t(s64, rate_opt, 1), (100 << 10)/8);
 
 	// Now we set predicted RTT to include the control.
 	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
 	md->predicted_rtt = control_predict(md);
 
 	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
+
+	// Convert for external units.
+	rate_opt <<= 20;
 
 	// debug
 	md->dstats.rate_set = rate_opt;
