@@ -1,84 +1,81 @@
 ################################################################################
 #
-# Author: David Fridovich-Keil ( dfk@eecs.berkeley.edu )
-# File: controller.py
+# Author: Taran Lynn ( tflynn@ucdavis.edu )
 #
-# Controller implementation. The controller holds an adaptive filter inside
-# which constantly updates its internal predictive model as new data arrives.
+# A dynamic matrix control approach for networking.
 #
 ################################################################################
 
-from adaptive_filter import AdaptiveFilter
-
 import numpy as np
+import random
 
 class Controller:
 
-    def __init__(self, psi, xi, gamma, p, q, alpha):
-        """ Constructor. """
+    def __init__(self, weight, lookback, lambda_, kappa):
+        self.weight = weight
+        self.lookback = lookback
 
-        self.psi_ = psi # Coefficient of variance term.
-        self.xi_ = xi # Coefficient of throughput term.
-        self.gamma_ = gamma # Parameter in nominal latency estimator.
+        self.g = np.repeat(0.0, lookback)
+        self.rttLB = np.repeat(0.0, lookback + 1)
+        self.y0 = 0.0
 
-        # Estimated nominal latency.
-        self.mu_latency_ = 0.0
-        self.mu_variance_ = 0.0
-        self.mu_control_ = 1.0
+        self.lhat = 0.0
 
-        # Keep an adaptive filter as the dynamics model.
-        self.model_ = AdaptiveFilter(p, q, alpha)
+        self.lambda_ = lambda_
+        self.kappa = kappa
 
-        # Most recent prediction.
-        self.l_hat_ = self.model_.Predict()
+        self.lAvg = 0.1
+        self.rAvg = 0.1
 
-    def Process(self, l, r = None):
-        """
-        Process a new latency/control pair. Two steps:
-        (1) updates internal model, and
-        (2) computes optimal control.
-        """
+    def process(self, l, r = None):
+        self.update(l)
+        r1 = self.rttLB[0]
 
-        # (1) Update internal model.
-        self.model_.Update(l, self.l_hat_)
+        self.newRTT(0)
+        lhat0 = self.predict()
 
-        self.mu_latency_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_latency_
-        self.mu_variance_ = ((1.0 - self.gamma_) * (self.l_hat_ - self.mu_latency_)**2 +
-                             self.gamma_ * self.mu_variance_)
+        if r is None:
+            lambda_ = self.lambda_ * self.lAvg**2 / self.rAvg**2
+            kappa = self.kappa * self.lAvg**2 / self.rAvg
+            g0 = self.g[0]
 
-        # (2) Compute optimal control.
-        self.l_hat_ = self.model_.Predict(0.0, True)
+            if g0 == 0:
+                g0 = 1
 
-        # Normalize coefficients before solving for optimal control.
-        psi = self.psi_ / self.mu_variance_
-        xi = self.xi_ / self.mu_control_
-        b0 = self.model_.b_[0]
+            r = r1 + (kappa - 2*g0*lhat0)/(2*lambda_ + 2*g0**2)
 
-        r_opt = ((xi - b0 / self.mu_latency_) * (0.5 / (psi * b0)) +
-                 self.mu_latency_ - self.l_hat_) / b0
+        r = min(max(0, r), 30)
+        self.rttLB[0] = r
+        self.lhat = self.predict()
 
-        """
-        (self.mu_ - self.l_hat_ +
-                 ((self.xi_ - self.model_.b_[0]) /
-                  (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0]
-        """
+        self.rAvg = self.wAvg(self.rAvg, r)
 
-        # Threshold the output.
-        # TODO! Make these bounds less arbitrary.
-        r_opt = max(0.1, min(r_opt, 34.35))
+        return (r, self.lhat)
 
-        if r is not None:
-            self.model_.r_.appendleft(r)
-            self.l_hat_ += self.model_.b_[0] * r
+    def predict(self):
+        diffs = self.rttLB[:-1] - self.rttLB[1:]
+        lhat = self.y0 + sum(self.g * diffs)
+        return max(0, min(lhat, 4*self.lAvg))
+
+    def update(self, l):
+        diff = self.rttLB[0] - self.rttLB[1]
+        self.y0 += self.g[-1] * (self.rttLB[-2] - self.rttLB[-1])
+
+        if diff == 0:
+            self.newG(1)
         else:
-            self.model_.r_.appendleft(r_opt)
-            self.l_hat_ += self.model_.b_[0] * r_opt
+            self.newG((l - self.lhat)/diff)
 
-        # Update control mean.
-        if r is not None:
-            self.mu_control_ = (1.0 - self.gamma_) * r + self.gamma_ * self.mu_control_
-        else:
-            self.mu_control_ = (1.0 - self.gamma_) * r_opt + self.gamma_ * self.mu_control_
+        self.lAvg = self.wAvg(self.lAvg, l)
 
-        # Return both optimal control and predicted latency.
-        return (r_opt, self.l_hat_)
+
+    def wAvg(self, avg, x):
+        return (1 - self.weight)*avg + self.weight*x
+
+    def newG(self, g):
+        self.g = np.roll(self.g, 1)
+        self.g[0] = g
+
+    def newRTT(self, rtt):
+        self.rttLB = np.roll(self.rttLB, 1)
+        self.rttLB[0] = rtt
