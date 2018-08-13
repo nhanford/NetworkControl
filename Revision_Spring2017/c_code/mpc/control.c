@@ -4,17 +4,10 @@
 #include "control.h"
 #include "util.h"
 
-// (x - y)^2
-inline s64 square_diff_s64(s64 x, s64 y)
+
+inline s64 sqr(s64 x)
 {
-	s64 diff;
-
-	if (x > y)
-		diff = x - y;
-	else
-		diff = y - x;
-
-	return diff * diff;
+	return x*x;
 }
 
 
@@ -39,7 +32,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	md->avg_rtt = max_t(s64, 1, wma(md->gamma, md->avg_rtt, rtt_meas));
 
 	md->avg_rtt_var = max_t(s64, 1, wma(md->gamma, md->avg_rtt_var,
-				square_diff_s64(md->predicted_rtt, md->avg_rtt)));
+				sqr(md->predicted_rtt - md->avg_rtt)));
 
 
 	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
@@ -115,21 +108,12 @@ void control_update(struct model *md, s64 rtt_meas)
 
 	for (i = 0; i < md->p; i++) {
 		s64 rtt = *lookback_index(&md->lb_rtt, i);
-
-		// Limit to prevent overflow.
-		if (total_norm > S64_MAX - rtt*rtt)
-			total_norm = S64_MAX;
-		else
-			total_norm += rtt*rtt;
+		total_norm += rtt*rtt;
 	}
 
 	for (i = 0; i < md->q; i++) {
 		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
-
-		if (total_norm > S64_MAX - rate*rate)
-			total_norm = S64_MAX;
-		else
-			total_norm += rate*rate;
+		total_norm += rate*rate;
 	}
 
 	total_norm = max_t(s64, 1, total_norm);
@@ -139,7 +123,6 @@ void control_update(struct model *md, s64 rtt_meas)
 		goto exit;
 
 	for (i = 0; i < md->p; i++) {
-		// FIXME: This overflows.
 		s64 rtt = *lookback_index(&md->lb_rtt, i);
 		s64 delta = rtt * md->alpha * error / total_norm;
 
