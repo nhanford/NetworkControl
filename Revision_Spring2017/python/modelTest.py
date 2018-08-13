@@ -17,10 +17,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-W = 0.75
-LB = 5
-L = 0
-K = 0.1
+K1 = 32
+K2 = 1
+W = 0.1
 
 NUM_DATA_POINTS = 200
 
@@ -36,7 +35,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(W, LB, L, K)
+        rateler = Controller(K1, K2, W)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
@@ -174,16 +173,16 @@ if __name__ == "__main__":
 
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
-    tester.test(Noise(Offset(10, 5, 2), 1), "Offset Latency")
+    tester.test(Offset(10, 5, 2), "Offset Latency")
 
-    ## Model for when consistency is desired.
-    #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
-    #        "Offset Latency with Penalized Rate Changes")
+    # Model for when consistency is desired.
+    tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
+            "Offset Latency with Penalized Rate Changes")
 
-    ## Here we switch from offset to constant halfway through. The idea is that
-    ## this could mimic a probing mode as suggested by Nate.
-    #tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
-    #        "Switch Offset to Constant Latency")
+    # Here we switch from offset to constant halfway through. The idea is that
+    # this could mimic a probing mode as suggested by Nate.
+    tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
+            "Switch Offset to Constant Latency")
 
     tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
             "Fridovich's Original Model")
