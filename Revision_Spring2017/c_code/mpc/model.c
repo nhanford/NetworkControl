@@ -79,46 +79,26 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q)
+void model_init(struct model *md, s64 cf, s64 weight)
 {
-	size_t i;
+	md->changeFactor = cf;
+	md->k1 = 0;
+	md->k2 = 0;
+	md->weight = weight*MPC_ONE/100;
 
-	md->psi = psi*MPC_ONE/100;
-	md->xi = xi*MPC_ONE/100;
-	md->gamma = gamma*MPC_ONE/100;
+	md->rtt_last = 0;
+	md->rate_last = 0;
+	md->rate_last2 = 0;
+	md->a = 0;
 
 	md->avg_rtt = 0;
-	md->avg_rtt_var = 0;
-	md->avg_pacing_rate = 0;
-
-	md->predicted_rtt = 0;
-
-	md->p = p;
-	md->q = q;
-
-	md->alpha = alpha*MPC_ONE/100;
-	md->a = kmalloc(p*sizeof(s64), GFP_KERNEL);
-	md->b = kmalloc(q*sizeof(s64), GFP_KERNEL);
-
-	for (i = 0; i < p; i++)
-		md->a[i] = 0;
-	for (i = 0; i < q; i++)
-		md->b[i] = 0;
-
-	lookback_init(&md->lb_rtt, p, 0);
-	lookback_init(&md->lb_pacing_rate, q, 0);
+	md->avg_rate = 0;
+	md->pred_rtt = 0;
 
 	mpc_dfs_init(&md->dstats);
 }
 
 void model_release(struct model *md)
 {
-	kfree(md->a);
-	kfree(md->b);
-
-	lookback_release(&md->lb_rtt);
-	lookback_release(&md->lb_pacing_rate);
-
 	mpc_dfs_release(&md->dstats);
 }

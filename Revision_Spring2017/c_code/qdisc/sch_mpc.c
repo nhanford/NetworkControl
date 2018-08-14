@@ -92,7 +92,7 @@ static void flow_init(struct mpc_flow *flow)
 	flow->probe_time_to_start = 0;
 	flow->probe_time_to_stop = 0;
 
-	model_init(&flow->md, 100, 10, 50, 50, 5, 1);
+	model_init(&flow->md, 10, 10);
 }
 
 static void flow_release(struct mpc_flow *flow)

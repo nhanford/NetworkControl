@@ -10,7 +10,7 @@
 #define USEC_PER_SEC 1000000
 #endif
 
-#define MPC_ONE 128
+#define MPC_ONE (1 << 20)
 
 static inline s64 wma(s64 weight, s64 avg, s64 x)
 {

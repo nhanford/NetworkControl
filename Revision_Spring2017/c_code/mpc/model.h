@@ -20,42 +20,29 @@ struct mpc_dfs_stats {
 };
 
 struct model {
-	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s32 psi;
-	s32 xi;
-	s32 gamma;
+	// RTT is in microseconds, rate is in Mbytes/s, and everything else is a
+	// fraction of MPC_ONE.
 
-	// us
+	s64 changeFactor;
+	s64 k1;
+	s64 k2;
+	s64 weight;
+
+	s64 rtt_last;
+	s64 rate_last;
+	s64 rate_last2;
+	s64 a;
+
 	s64 avg_rtt;
-	s64 avg_rtt_var;
-
-	// MB/s
-	s64 avg_pacing_rate;
-
-	// us
-	s64 predicted_rtt;
-
-	size_t p;
-	size_t q;
-
-	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s32 alpha;
-	s64 *a;
-	s64 *b;
-
-	// us
-	struct lookback lb_rtt;
-
-	// MB/s
-	struct lookback lb_pacing_rate;
+	s64 avg_rate;
+	s64 pred_rtt;
 
 	// For debugging.
 	struct mpc_dfs_stats dstats;
 };
 
-// psi, xi, gamma, and alpha are percentages.
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q);
+// cd and weight are percentages (i.e. 50 = 50%).
+void model_init(struct model *md, s64 cf, s64 weight);
 
 void model_release(struct model *md);
 
