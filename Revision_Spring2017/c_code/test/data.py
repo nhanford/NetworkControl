@@ -30,17 +30,17 @@ class Data(object):
         """
         :test: The name of the test to gather information for.
         """
-        bwctlFile = test + '-bwctl.json'
+        testFile = test + '-test.json'
         moduleFile = test + '-module.json'
         timeFile = test + '-time.txt'
 
-        with open(bwctlFile) as data:
+        with open(testFile) as data:
             pdata = json.load(data)
-            bwctlStartTime = pdata['start']['timestamp']['timesecs']
+            startTime = pdata['start']['timestamp']['timesecs']
             strms = list(map(lambda i: i['streams'], pdata['intervals']))
             strms = [x for y in strms for x in y] # Flatten
 
-            self.rawBWCtl = pdata
+            self.rawTest = pdata
             self.stream = pd.DataFrame(strms)
 
         with open(moduleFile) as data:
@@ -54,4 +54,4 @@ class Data(object):
                         "rate_set", "probing"])
 
             # Normalize times to be the same as those from BWCtl.
-            self.module.time -= bwctlStartTime
+            self.module.time -= startTime
