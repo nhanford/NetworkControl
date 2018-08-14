@@ -108,7 +108,7 @@ modfig.suptitle("Kernel Module")
 
 
 if args.output is not None:
-    bwfig.savefig(args.output + "-bwctl." + args.output_extension)
+    bwfig.savefig(args.output + "-test." + args.output_extension)
     modfig.savefig(args.output + "-module." + args.output_extension)
 else:
     plt.show()

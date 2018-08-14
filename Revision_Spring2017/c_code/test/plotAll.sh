@@ -1,12 +1,22 @@
 #!/bin/bash
 
-for file in $(find . -name '*-bwctl.json')
-do
-  test=${file%-bwctl.json}
+if [[ -n $1 ]]
+then
+    dir=$1
+else
+    dir="."
+fi
 
-  if [[ -e "$test-module.json"
-    && ((! -e "$test-plot.pdf") || ($file -nt "$test-plot")) ]]
-  then
-    python ./plot.py $test --output "$test-plot"
-  fi
+for file in $(find $dir -name '*-test.json')
+do
+    test=${file%-test.json}
+
+    if [[ -e "$test-module.json"
+        && ((! -e "$test-plot-test.pdf") || ($file -nt "$test-plot-test.pdf")) ]]
+    then
+        echo "Plotting $test"
+        ./plot.py $test --output "$test-plot"
+    else
+        echo "Skipping $test"
+    fi
 done
