@@ -10,10 +10,10 @@ import numpy as np
 import random
 
 class Controller:
-
-    def __init__(self, k1, k2, weight):
-        self.k1 = k1
-        self.k2 = k2
+    def __init__(self, cf, weight):
+        self.changeFactor = cf
+        self.k1 = 1.0
+        self.k2 = 1.0
         self.weight = weight
 
         self.rttLast = 0.0
@@ -23,12 +23,18 @@ class Controller:
 
         self.avgRTT = 0.0
         self.avgRate = 0.0
+        self.predRTT = 0.0
 
     def process(self, rtt):
-        rate = 1
+        diff = self.rateLast - self.rateLast2
 
-        if self.rateLast - self.rateLast2 != 0:
-            self.a = (rtt - self.rttLast)/(self.rateLast - self.rateLast2)
+        if abs(diff) > self.changeFactor * self.avgRate:
+            self.k1 *= 2
+        elif abs(diff) < self.changeFactor**2 * self.avgRate:
+            self.k1 /= 2
+
+        if diff != 0:
+            self.a = (rtt - self.rttLast)/diff
 
         if self.a != 0 and self.rateLast > 0:
             k1 = self.k1
@@ -46,8 +52,9 @@ class Controller:
         self.rttLast = rtt
         self.rateLast2 = self.rateLast
         self.rateLast = rate
+        self.predRTT = self.a*(self.rateLast - self.rateLast2) + rtt
 
         self.avgRTT = (1 - self.weight)*self.avgRTT + self.weight*rtt
         self.avgRate = (1 - self.weight)*self.avgRate + self.weight*rate
 
-        return (rate, self.a*(self.rateLast - self.rateLast2) + rtt)
+        return (rate, self.predRTT)
