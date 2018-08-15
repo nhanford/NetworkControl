@@ -82,6 +82,7 @@ static void flow_init(struct mpc_flow *flow)
 	flow->qlen = 0;
 
 	flow->rate = 0;
+	flow->time_to_send = 0;
 
 	flow->last_srtt = 0;
 
