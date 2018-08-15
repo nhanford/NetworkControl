@@ -79,11 +79,11 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s64 cf, s64 weight)
+void model_init(struct model *md, s64 max_diff_perc, s64 weight)
 {
-	md->changeFactor = cf;
-	md->k1 = 0;
-	md->k2 = 0;
+	md->max_diff_perc = max_t(s64, 1, max_diff_perc*MPC_ONE/100);
+	md->k1 = MPC_ONE/md->max_diff_perc;
+	md->k2 = MPC_ONE;
 	md->weight = weight*MPC_ONE/100;
 
 	md->rtt_last = 0;

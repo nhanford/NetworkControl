@@ -19,11 +19,6 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	// Convert for internal units.
 	rate >>= 20;
 
-	if(sqr(diff) > sqr(md->changeFactor * md->avg_rate / MPC_ONE))
-		md->k1 *= 2;
-	else if(sqr(diff) < sqr(sqr(md->changeFactor) * md->avg_rate / sqr(MPC_ONE)))
-		md->k1 /= 2;
-
 	if(diff != 0)
 		md->a = (rtt_meas - md->rtt_last)*MPC_ONE/diff;
 
@@ -51,7 +46,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 
 	if(rate_opt < 100)
 		rate_opt = 100;
-	if(rate_opt > 100<<10)
+	else if(rate_opt > 100<<10)
 		rate_opt = 100<<10;
 
 	md->rtt_last = rtt_meas;

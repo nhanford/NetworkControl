@@ -84,6 +84,8 @@ static void flow_init(struct mpc_flow *flow)
 	flow->tail = NULL;
 	flow->qlen = 0;
 
+	flow->rate = 0;
+
 	flow->last_time_to_send = 0;
 
 	flow->last_srtt = 0;
@@ -92,7 +94,7 @@ static void flow_init(struct mpc_flow *flow)
 	flow->probe_time_to_start = 0;
 	flow->probe_time_to_stop = 0;
 
-	model_init(&flow->md, 10, 10);
+	model_init(&flow->md, 5, 10);
 }
 
 static void flow_release(struct mpc_flow *flow)
@@ -304,6 +306,7 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	}
 
 	skb = flow_dequeue(flow);
+	flow_update_time_to_send(flow, now);
 
 	// Update rate using MPC.
 	if (skb != NULL && skb->sk != NULL

@@ -23,7 +23,7 @@ struct model {
 	// RTT is in microseconds, rate is in Mbytes/s, and everything else is a
 	// fraction of MPC_ONE.
 
-	s64 changeFactor;
+	s64 max_diff_perc;
 	s64 k1;
 	s64 k2;
 	s64 weight;
@@ -41,8 +41,10 @@ struct model {
 	struct mpc_dfs_stats dstats;
 };
 
-// cd and weight are percentages (i.e. 50 = 50%).
-void model_init(struct model *md, s64 cf, s64 weight);
+// max_diff_perc and weight are percentages (i.e. 50 = 50%).
+// max_diff_perc is maximum percentage change in rate.
+// weight is the weight applied when averaging RTT and rate.
+void model_init(struct model *md, s64 max_diff_perc, s64 weight);
 
 void model_release(struct model *md);
 
