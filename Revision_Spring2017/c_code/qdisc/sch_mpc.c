@@ -41,9 +41,6 @@ struct mpc_flow {
 	// The pacing rate to send in bytes per second.
 	u64 rate;
 
-	// The time we sent, or will send, the last packet at.
-	u64 last_time_to_send;
-
 	// The time at which the next packet should be sent.
 	u64 time_to_send;
 
@@ -84,7 +81,7 @@ static void flow_init(struct mpc_flow *flow)
 	flow->tail = NULL;
 	flow->qlen = 0;
 
-	flow->last_time_to_send = 0;
+	flow->rate = 0;
 
 	flow->last_srtt = 0;
 
@@ -150,8 +147,7 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 time)
 
 		// Take the max here to ensure that we don't go past the max rate on a
 		// burst.
-		flow->last_time_to_send = max_t(u64, time, flow->last_time_to_send) + min_delay;
-		flow->time_to_send = flow->last_time_to_send;
+		flow->time_to_send = max_t(u64, time, flow->time_to_send + min_delay);
 	}
 }
 
@@ -304,6 +300,7 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	}
 
 	skb = flow_dequeue(flow);
+	flow_update_time_to_send(flow, now);
 
 	// Update rate using MPC.
 	if (skb != NULL && skb->sk != NULL
