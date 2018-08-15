@@ -41,10 +41,14 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
             stdout = subprocess.PIPE)
 
         (outputFile, _) = tester.communicate()
+        outputFile = outputFile.splitlines()[0]
         print("Tester finished with code {}.".format(tester.returncode))
 
         if outputFile != "":
-            os.rename(outputFile, args.test + "-test.json")
+            resFile = args.test + "-test.json"
+            print("Moving BWCTL output file\"{}\" to \"{}\"."
+                .format(outputFile, resFile))
+            os.rename(outputFile, resFile)
         else:
             print("BWCTL failed to produce output.")
     else:
