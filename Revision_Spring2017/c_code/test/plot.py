@@ -18,13 +18,24 @@ parser.add_argument('-q', '--limit-quantile', type=float,
         help="Limits output range to within double of a certain quantile.")
 parser.add_argument('-i', '--id', type=str,
         help="Only select kernel output on ID.")
+parser.add_argument('--guess-id', action='store_true',
+        help="Guess the best ID to use")
 args = parser.parse_args()
 
 
 data = Data(args.test)
+mid = args.id
 
-if args.id is not None:
-    mid = args.id
+if mid is None and args.guess_id:
+    # We guess the appropriate MPC ID by looking at the variance in the measured
+    # RTT. It has been observed that the one with the highest variance (actually
+    # just a non-zero variance) is the correct id.
+    groups = data.module.groupby('id')
+
+    if not len(groups) == 0:
+        mid = max(groups, key = lambda x: x[1].rtt_meas_us.std())[0]
+
+if mid is not None:
     data.module = data.module.query("id == @mid")
 
 rtt_adj = data.stream.rtt/1000
