@@ -7,6 +7,7 @@
 
 
 static struct dentry *root = NULL;
+static unsigned long long alive = 0;
 static DEFINE_SPINLOCK(dfs_lock);
 static unsigned long long dfs_id = 0;
 
@@ -48,12 +49,11 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	if (root != NULL)
 		dstats->dir = debugfs_create_dir(uniq_name, root);
 
-	spin_unlock_irqrestore(&dfs_lock, flags);
-
-
 	if (dstats->dir == NULL) {
 		mpc_log("Failed to create debugfs directory.\n");
 	} else {
+		alive++;
+
 		debugfs_create_file("rtt_meas_us", 0444, dstats->dir,
 				&dstats->rtt_meas_us, &fops_s64);
 		debugfs_create_file("rtt_pred_us", 0444, dstats->dir,
@@ -62,19 +62,28 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 				&dstats->rate_set, &fops_s64);
 		debugfs_create_bool("probing", 0444, dstats->dir,
 				&dstats->probing);
+
 		dfs_id = (dfs_id + 1) % ULLONG_MAX;
 	}
+
+	spin_unlock_irqrestore(&dfs_lock, flags);
 }
 
 void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&dfs_lock, flags);
-	if (root != NULL)
-		debugfs_remove_recursive(root);
+	debugfs_remove_recursive(dstats->dir);
 
-	root = NULL;
+	spin_lock_irqsave(&dfs_lock, flags);
+
+	alive--;
+
+	if (alive == 0 && root != NULL) {
+		debugfs_remove_recursive(root);
+		root = NULL;
+	}
+
 	spin_unlock_irqrestore(&dfs_lock, flags);
 }
 
