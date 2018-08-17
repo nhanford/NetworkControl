@@ -242,16 +242,9 @@ class_default:
 static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
-	struct mpc_flow *it;
-	bool add = true;
 
-	list_for_each_entry(it, &q->sending, send_list) {
-		if (it == flow)
-			add = false;
-	}
-
-	if (add)
-		list_add_tail(&flow->send_list, &q->sending);
+	if (list_empty(&flow->send_list))
+		list_add(&flow->send_list, &q->sending);
 }
 
 
@@ -259,6 +252,7 @@ static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 static void mpc_del_flow(struct Qdisc *sch, struct mpc_flow *flow)
 {
 	list_del(&flow->send_list);
+	INIT_LIST_HEAD(&flow->send_list);
 }
 
 
@@ -440,6 +434,19 @@ nla_put_failure:
 static void mpc_reset(struct Qdisc *sch)
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
+	int i;
+
+	for (i = 0; i < NUM_FLOWS; i++) {
+		if (q->flows[i].used)
+			flow_release(&q->flows[i]);
+	}
+
+	if (q->def_flow.used) {
+		flow_release(&q->def_flow);
+		flow_init(&q->def_flow);
+	}
+
+	INIT_LIST_HEAD(&q->sending);
 
 	qdisc_reset_queue(sch);
 	qdisc_watchdog_cancel(&q->watchdog);
@@ -455,12 +462,15 @@ static void mpc_destroy(struct Qdisc *sch)
 			flow_release(&q->flows[i]);
 	}
 
+	if (q->def_flow.used)
+		flow_release(&q->def_flow);
+
 	kfree(q->flows);
 }
 
 struct Qdisc_ops mpc_qdisc_ops __read_mostly = {
 	.id		=	"mpc",
-	.priv_size	=	0,
+	.priv_size	=	sizeof(struct mpc_sched_data),
 	.enqueue	=	mpc_enqueue,
 	.dequeue	=	mpc_dequeue,
 	.peek		=	mpc_peek,
