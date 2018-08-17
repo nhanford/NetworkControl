@@ -153,7 +153,7 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 now)
 	flow->time_to_send = max_t(u64, now, flow->time_to_send + min_delay);
 }
 
-static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
+static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 {
 	// srtt' = (1 - a) * srtt + a * rtt
 	// rtt = srtt + (srtt' - srtt)/a
@@ -174,19 +174,19 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 time)
 	flow->last_srtt = srtt_us;
 
 
-	if (!flow->probing && time >= flow->probe_time_to_start) {
+	if (!flow->probing && now >= flow->probe_time_to_start) {
 		flow->probing = true;
-		flow->probe_time_to_stop = time + MAX_PROBE_TIME_NS;
+		flow->probe_time_to_stop = now + MAX_PROBE_TIME_NS;
 		flow->target_lat = 2*rtt;
 	}
 
 	if (flow->probing) {
-		if (rtt >= flow->target_lat || time >= flow->probe_time_to_stop) {
+		s64 new_rate = min_t(s64, max_t(s64, 1, 2*flow->rate), S64_MAX);
+		flow->rate = control_process(&flow->md, rtt, new_rate);
+
+		if (rtt >= flow->target_lat || now >= flow->probe_time_to_stop) {
 			flow->probing = false;
-			flow->probe_time_to_start = time + INTER_PROBE_TIME_NS;
-		} else {
-			flow->rate = control_process(&flow->md, rtt,
-						2*flow->rate);
+			flow->probe_time_to_start = now + INTER_PROBE_TIME_NS;
 		}
 	} else {
 		flow->rate = control_process(&flow->md, rtt, 0);
