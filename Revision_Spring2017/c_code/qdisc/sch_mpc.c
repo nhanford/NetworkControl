@@ -386,6 +386,8 @@ static int mpc_change(struct Qdisc *sch, struct nlattr *opt,
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0)
 static int mpc_init(struct Qdisc *sch, struct nlattr *opt)
 #else
+static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
+		struct netlink_ext_ack *extack)
 #endif
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
