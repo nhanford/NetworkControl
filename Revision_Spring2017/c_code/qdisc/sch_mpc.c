@@ -469,7 +469,7 @@ EXPORT_SYMBOL(mpc_qdisc_ops);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Taran Lynn");
-MODULE_DESCRIPTION("A simple example Qdisc.");
+MODULE_DESCRIPTION("A Qdisc that uses model predictive control.");
 MODULE_VERSION("0.01");
 
 static int __init mpcqd_init(void) {
