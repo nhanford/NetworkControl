@@ -310,11 +310,12 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	}
 
 	skb = flow_dequeue(flow);
+	mpc_del_flow(sch, flow);
 
-	if (flow->qlen == 0)
-		mpc_del_flow(sch, flow);
-	else
+	if (flow->qlen > 0) {
 		flow_update_time_to_send(flow, now);
+		mpc_add_flow(sch, flow);
+	}
 
 	// Update rate using MPC.
 	if (skb != NULL && skb->sk != NULL
