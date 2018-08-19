@@ -9,4 +9,5 @@
 
 # C build files.
 *.o
+*.o.cmd
 *.ko
