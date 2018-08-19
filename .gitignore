@@ -10,4 +10,5 @@
 # C build files.
 *.o
 *.o.cmd
+*.mod.c
 *.ko
