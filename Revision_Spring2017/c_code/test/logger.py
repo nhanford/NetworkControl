@@ -13,9 +13,10 @@ def now():
     return float("{}.{}".format(dt.strftime("%s"), dt.microsecond))
 
 class Logger:
-    def __init__(self, output, interval):
+    def __init__(self, output, interval, verbose = False):
         self.output = output
         self.interval = interval
+        self.verbose = verbose
 
         self.running = True
         self.lock = threading.Lock()
@@ -56,9 +57,15 @@ class Logger:
                         else:
                             probing = False
 
-                        data.append({'time': t, 'id': os.path.basename(mpc),
+                        info = {'time': t, 'id': os.path.basename(mpc),
                             'rtt_meas_us': rtt, 'rtt_pred_us': rttP,
-                            'rate_set': rate, 'probing': probing})
+                            'rate_set': rate, 'probing': probing}
+
+                        data.append(info)
+
+                        if self.verbose:
+                            print("RTT (ms): {}, Set Rate (B/s): {}".format(
+                                info['rtt_meas_us']/1000.0, info['rate_set']))
 
                 except FileNotFoundError:
                     pass

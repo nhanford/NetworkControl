@@ -17,11 +17,13 @@ parser.add_argument('-i', '--interval', type = float, default = 0.1,
         help = "Interval between samples.")
 parser.add_argument('-t', '--tester', type = str, choices = ['iperf3', 'bwctl'],
         default = 'iperf3', help = "The tester to run.")
+parser.add_argument('-v', '--verbose', action='store_true',
+        help="Print additional information.")
 args = parser.parse_args()
 
 
 print("Starting kernel logging.")
-logger = logger.Logger(args.test + "-module.json", args.interval)
+logger = logger.Logger(args.test + "-module.json", args.interval, args.verbose)
 logger.start()
 
 with open(args.test + "-test.json", mode = 'w') as testFile:
@@ -37,7 +39,7 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
     elif args.tester == 'bwctl':
         tester = subprocess.Popen(['bwctl', '-c', args.destination,
             '-T', 'iperf3', '-i', str(args.interval), '-t', str(args.duration),
-            '--parsable', '-p',],
+            '--parsable', '-p'],
             stdout = subprocess.PIPE)
 
         (outputFile, _) = tester.communicate()
