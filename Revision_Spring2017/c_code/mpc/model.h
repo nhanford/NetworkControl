@@ -1,23 +1,10 @@
 
-#include <linux/debugfs.h>
-
+#include "dfs.h"
 #include "lookback.h"
 #include "util.h"
 
 #ifndef MODEL_H
 #define MODEL_H
-
-#define MPC_DFS_DIR "mpc"
-
-
-struct mpc_dfs_stats {
-	struct dentry *dir;
-
-	s64 rtt_meas_us;
-	s64 rtt_pred_us;
-	s64 rate_set;
-	bool probing;
-};
 
 struct model {
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
