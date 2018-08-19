@@ -88,7 +88,7 @@ void mpc_dfs_release(struct mpc_dfs_stats *dstats)
 }
 
 
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
+int model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 		size_t p, size_t q)
 {
 	size_t i;
@@ -105,20 +105,41 @@ void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 
 	md->p = p;
 	md->q = q;
+	md->probe_cnt = 0;
 
 	md->alpha = alpha*MPC_ONE/100;
+
 	md->a = kmalloc(p*sizeof(s64), GFP_KERNEL);
+	if (md->a == NULL)
+		goto exit_failure_a;
+
 	md->b = kmalloc(q*sizeof(s64), GFP_KERNEL);
+	if (md->b == NULL)
+		goto exit_failure_b;
 
 	for (i = 0; i < p; i++)
 		md->a[i] = 0;
 	for (i = 0; i < q; i++)
 		md->b[i] = 0;
 
-	lookback_init(&md->lb_rtt, p, 0);
-	lookback_init(&md->lb_pacing_rate, q, 0);
+	if (lookback_init(&md->lb_rtt, p, 0))
+		goto exit_failure_c;
+
+	if (lookback_init(&md->lb_pacing_rate, q, 0))
+		goto exit_failure_d;
 
 	mpc_dfs_init(&md->dstats);
+
+	return 0;
+
+exit_failure_d:
+	lookback_release(&md->lb_rtt);
+exit_failure_c:
+	kfree(md->b);
+exit_failure_b:
+	kfree(md->a);
+exit_failure_a:
+	return 1;
 }
 
 void model_release(struct model *md)

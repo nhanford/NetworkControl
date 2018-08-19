@@ -23,16 +23,17 @@
 #include "sch_mpc.h"
 
 
-const size_t NUM_FLOWS = 1024;
-const u64 INTER_PROBE_TIME_NS = 10*NSEC_PER_SEC;
-const u64 MAX_PROBE_TIME_NS = NSEC_PER_SEC;
+#define MAX_FLOWS (1 << 10)
+#define INTER_PROBE_TIME_NS (10*NSEC_PER_SEC)
+#define HT_BITS (5)
 
 
 struct mpc_flow {
-	bool used;
-
 	u32 addr;
+
+	// Empty indicates not in q->sending.
 	struct list_head send_list;
+	struct hlist_node hash_list;
 
 	struct sk_buff *head;
 	struct sk_buff *tail;
@@ -47,12 +48,7 @@ struct mpc_flow {
 	// Last smoothed rtt seen by the model.
 	u32 last_srtt;
 
-	bool probing;
-	u64 target_lat;
-	union {
-		u64 probe_time_to_start;
-		u64 probe_time_to_stop;
-	};
+	u64 probe_time_to_start;
 
 	struct model md;
 };
@@ -60,7 +56,8 @@ struct mpc_flow {
 
 struct mpc_sched_data {
 	// The flows. This is a hash map from destination addresses to flows.
-	struct mpc_flow *flows;
+	DECLARE_HASHTABLE(flows, HT_BITS);
+	size_t num_flows;
 
 	// Flow to use when classification fails or we are at our limit.
 	struct mpc_flow def_flow;
@@ -68,17 +65,17 @@ struct mpc_sched_data {
 	// Watchdog to set a timeout.
 	struct qdisc_watchdog watchdog;
 
-	// A list of flows that need to send packets.
+	// A list of flows that need to send packets, ordered by sending time
+	// (smallest to largest).
 	struct list_head sending;
 };
 
 
-static void flow_init(struct mpc_flow *flow)
+static int flow_init(struct mpc_flow *flow, u64 addr)
 {
-	flow->used = true;
-
-	flow->addr = 0;
+	flow->addr = addr;
 	INIT_LIST_HEAD(&flow->send_list);
+	INIT_HLIST_NODE(&flow->hash_list);
 
 	flow->head = NULL;
 	flow->tail = NULL;
@@ -89,16 +86,13 @@ static void flow_init(struct mpc_flow *flow)
 
 	flow->last_srtt = 0;
 
-	flow->probing = false;
-	flow->target_lat = 0;
 	flow->probe_time_to_start = 0;
 
-	model_init(&flow->md, 100, 10, 50, 50, 5, 1);
+	return model_init(&flow->md, 100, 10, 50, 50, 5, 1);
 }
 
 static void flow_release(struct mpc_flow *flow)
 {
-	flow->used = false;
 	model_release(&flow->md);
 }
 
@@ -173,23 +167,11 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 
 	flow->last_srtt = srtt_us;
 
-
-	if (!flow->probing && now >= flow->probe_time_to_start) {
-		flow->probing = true;
-		flow->probe_time_to_stop = now + MAX_PROBE_TIME_NS;
-		flow->target_lat = 2*rtt;
-	}
-
-	if (flow->probing) {
-		s64 new_rate = min_t(s64, max_t(s64, 1, 2*flow->rate), S64_MAX);
-		flow->rate = control_process(&flow->md, rtt, new_rate);
-
-		if (rtt >= flow->target_lat || now >= flow->probe_time_to_stop) {
-			flow->probing = false;
-			flow->probe_time_to_start = now + INTER_PROBE_TIME_NS;
-		}
+	if (now >= flow->probe_time_to_start) {
+		flow->probe_time_to_start = now + INTER_PROBE_TIME_NS;
+		flow->rate = control_process(&flow->md, rtt, true);
 	} else {
-		flow->rate = control_process(&flow->md, rtt, 0);
+		flow->rate = control_process(&flow->md, rtt, false);
 	}
 }
 
@@ -202,36 +184,36 @@ static struct mpc_flow *mpc_classify(struct Qdisc *sch, struct sk_buff *skb)
 	// classful, *it's wierd*).
 	struct mpc_sched_data *q = qdisc_priv(sch);
 	struct mpc_flow *flow = NULL;
-	size_t cnt = 0;
-	size_t i;
+	struct mpc_flow *it;
+	u32 addr;
 
-	if (skb->sk == NULL)
+	if (skb->sk == NULL || q->num_flows >= MAX_FLOWS)
 		goto class_default;
 
-	i = skb->sk->sk_daddr % NUM_FLOWS;
+	addr = skb->sk->sk_daddr;
+	addr = be32_to_cpu(addr);
 
-	while (flow == NULL && cnt < NUM_FLOWS) {
-		if (!q->flows[i].used || q->flows[i].addr == skb->sk->sk_daddr) {
-			flow = &q->flows[i];
-		} else if (q->flows[i].qlen == 0) {
-			// Reclaim unused flows.
-			flow_release(&q->flows[i]);
-			flow = &q->flows[i];
-		} else {
-			i = (i + 1) % NUM_FLOWS;
-		}
-
-		cnt++;
+	hash_for_each_possible(q->flows, it, hash_list, addr) {
+		if (it->addr == addr)
+			flow = it;
 	}
 
-	if (flow != NULL) {
-		if (!flow->used) {
-			flow_init(flow);
-			flow->addr = skb->sk->sk_daddr;
+	if (flow == NULL) {
+		flow = kmalloc(sizeof(struct mpc_flow), GFP_KERNEL);
+
+		if (flow == NULL) {
+			goto class_default;
+		} else if (flow_init(flow, addr)) {
+			kfree(flow);
+			goto class_default;
 		}
 
-		return flow;
+		hash_add(q->flows, &flow->hash_list, flow->addr);
+
+		q->num_flows++;
 	}
+
+	return flow;
 
 class_default:
 	return &q->def_flow;
@@ -241,18 +223,30 @@ class_default:
 // Add a flow to the list of flows that have a packet to send.
 static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 {
-	struct mpc_sched_data *q = qdisc_priv(sch);
+	// We want to add the flow just in front of the last one sending sooner
+	// than it.
 
-	if (list_empty(&flow->send_list))
-		list_add(&flow->send_list, &q->sending);
+	struct mpc_sched_data *q = qdisc_priv(sch);
+	struct mpc_flow *it;
+	struct list_head *last = &q->sending;
+
+	if (list_empty(&flow->send_list)) {
+		list_for_each_entry(it, &q->sending, send_list) {
+			if (it->time_to_send <= flow->time_to_send)
+				last = &it->send_list;
+			else if(it->time_to_send > flow->time_to_send)
+				break;
+		}
+
+		list_add(&flow->send_list, last);
+	}
 }
 
 
 // Add a flow to the list of flows that have a packet to send.
 static void mpc_del_flow(struct Qdisc *sch, struct mpc_flow *flow)
 {
-	list_del(&flow->send_list);
-	INIT_LIST_HEAD(&flow->send_list);
+	list_del_init(&flow->send_list);
 }
 
 
@@ -261,18 +255,11 @@ static void mpc_del_flow(struct Qdisc *sch, struct mpc_flow *flow)
 static struct mpc_flow *mpc_get_next_flow(struct Qdisc *sch)
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
-	struct mpc_flow *flow = NULL;
-	struct mpc_flow *it = NULL;
-	u64 tts = U64_MAX;
 
-	list_for_each_entry(it, &q->sending, send_list) {
-		if (it->time_to_send < tts) {
-			flow = it;
-			tts = it->time_to_send;
-		}
-	}
-
-	return flow;
+	if (list_empty(&q->sending))
+		return NULL;
+	else
+		return list_first_entry(&q->sending, struct mpc_flow, send_list);
 }
 
 
@@ -294,7 +281,7 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 {
 	struct mpc_flow *flow = mpc_classify(sch, skb);
 
-	if (flow->qlen == sch->limit) {
+	if (flow == NULL || flow->qlen == sch->limit) {
 		return qdisc_drop(skb, sch, to_free);
 	} else if (skb != NULL) {
 		u64 now = ktime_get_ns();
@@ -391,15 +378,10 @@ static int mpc_init(struct Qdisc *sch, struct nlattr *opt,
 #endif
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
-	size_t i;
 
-	q->flows = kmalloc(NUM_FLOWS * sizeof(struct mpc_flow), GFP_KERNEL);
-
-	for (i = 0; i < NUM_FLOWS; i++)
-		q->flows[i].used = false;
-
-	flow_init(&q->def_flow);
-
+	hash_init(q->flows);
+	q->num_flows = 0;
+	flow_init(&q->def_flow, 0);
 	qdisc_watchdog_init(&q->watchdog, sch);
 	INIT_LIST_HEAD(&q->sending);
 
@@ -433,21 +415,18 @@ nla_put_failure:
 	return -1;
 }
 
+
+static void mpc_destroy(struct Qdisc *sch);
+
 static void mpc_reset(struct Qdisc *sch)
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
-	int i;
 
-	for (i = 0; i < NUM_FLOWS; i++) {
-		if (q->flows[i].used)
-			flow_release(&q->flows[i]);
-	}
+	mpc_destroy(sch);
 
-	if (q->def_flow.used) {
-		flow_release(&q->def_flow);
-		flow_init(&q->def_flow);
-	}
-
+	hash_init(q->flows);
+	q->num_flows = 0;
+	flow_init(&q->def_flow, 0);
 	INIT_LIST_HEAD(&q->sending);
 
 	qdisc_reset_queue(sch);
@@ -457,18 +436,20 @@ static void mpc_reset(struct Qdisc *sch)
 static void mpc_destroy(struct Qdisc *sch)
 {
 	struct mpc_sched_data *q = qdisc_priv(sch);
-	size_t i;
+	struct hlist_node tmp;
+	struct hlist_node *tmpp = &tmp;
+	struct mpc_flow *it;
+	size_t bkt;
 
-	for (i = 0; i < NUM_FLOWS; i++) {
-		if (q->flows[i].used)
-			flow_release(&q->flows[i]);
+	hash_for_each_safe(q->flows, bkt, tmpp, it, hash_list) {
+		hash_del(&it->hash_list);
+		flow_release(it);
+		kfree(it);
 	}
 
-	if (q->def_flow.used)
-		flow_release(&q->def_flow);
-
-	kfree(q->flows);
+	flow_release(&q->def_flow);
 }
+
 
 struct Qdisc_ops mpc_qdisc_ops __read_mostly = {
 	.id		=	"mpc",

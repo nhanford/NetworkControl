@@ -6,11 +6,10 @@
 
 // Update model and return the next pacing rate.
 //
-// If rate is not 0, then forgo the normal MPC model and simply set
-// the rate to that amount. This is useful for implementing probing.
+// If probe is true, then probing mode is initiated.
 //
 // @param rtt_meas RTT measured in us.
-// @param rate The pacing rate to set measured in bytes/s.
-s64 control_process(struct model *md, s64 rtt_meas, s64 rate);
+// @param probe Indicates probing mode should be initiated.
+s64 control_process(struct model *md, s64 rtt_meas, bool probe);
 
 #endif /* end of include guard: CONTROL_H */

@@ -10,6 +10,10 @@
 #define USEC_PER_SEC 1000000
 #endif
 
+// Bytes/s
+#define MPC_MIN_RATE (1UL)
+#define MPC_MAX_RATE (100UL << 10)
+
 #define MPC_ONE 128
 
 static inline s64 wma(s64 weight, s64 avg, s64 x)

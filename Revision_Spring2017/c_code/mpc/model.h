@@ -37,6 +37,7 @@ struct model {
 
 	size_t p;
 	size_t q;
+	size_t probe_cnt;
 
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
 	s32 alpha;
@@ -54,7 +55,7 @@ struct model {
 };
 
 // psi, xi, gamma, and alpha are percentages.
-void model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
+int model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 		size_t p, size_t q);
 
 void model_release(struct model *md);

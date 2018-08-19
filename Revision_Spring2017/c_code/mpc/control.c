@@ -11,17 +11,14 @@ inline s64 sqr(s64 x)
 }
 
 
-s64 control_predict(struct model *md);
-void control_update(struct model *md, s64 rtt_meas);
+static s64 control_predict(struct model *md);
+static void control_update(struct model *md, s64 rtt_meas);
 
 
-s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
+s64 control_process(struct model *md, s64 rtt_meas, bool probe)
 {
 	s64 b0 = md->b[0];
 	s64 rate_opt = *lookback_index(&md->lb_pacing_rate, 0);
-
-	// Convert for internal units.
-	rate >>= 20;
 
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
@@ -34,13 +31,18 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	md->avg_rtt_var = max_t(s64, 1, wma(md->gamma, md->avg_rtt_var,
 				sqr(md->predicted_rtt - md->avg_rtt)));
 
+	if (probe)
+		md->probe_cnt = max_t(size_t, md->p, md->q);
+
 
 	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
 	lookback_add(&md->lb_pacing_rate, 0);
 	md->predicted_rtt = control_predict(md);
 
-	if (rate > 0) {
-		rate_opt = rate;
+	if (md->probe_cnt > 0) {
+		rate_opt = MPC_MAX_RATE;
+		md->probe_cnt--;
+
 		md->dstats.probing = true;
 	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0 && b0 > 0) {
@@ -62,9 +64,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 	}
 
 	// Clamp rate
-	// TODO: Make bounds less arbitrary than 1 mbit/s. 100 gbit/s is to limit
-	// overflows.
-	rate_opt = min_t(s64, max_t(s64, rate_opt, 1), (100 << 10)/8);
+	rate_opt = min_t(s64, max_t(s64, rate_opt, MPC_MIN_RATE), MPC_MAX_RATE);
 
 	// Now we set predicted RTT to include the control.
 	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
@@ -82,7 +82,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 }
 
 
-s64 control_predict(struct model *md)
+static s64 control_predict(struct model *md)
 {
 	s64 predicted_rtt = 0;
 	size_t i = 0;
@@ -97,7 +97,7 @@ s64 control_predict(struct model *md)
 }
 
 
-void control_update(struct model *md, s64 rtt_meas)
+static void control_update(struct model *md, s64 rtt_meas)
 {
 	size_t i;
 	s64 error;
