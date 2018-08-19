@@ -4,7 +4,7 @@
 #include "lookback.h"
 
 
-void lookback_init(struct lookback *lb, size_t size, s64 elem)
+int lookback_init(struct lookback *lb, size_t size, s64 elem)
 {
 	int i;
 
@@ -12,8 +12,16 @@ void lookback_init(struct lookback *lb, size_t size, s64 elem)
 	lb->elems = kmalloc(size * sizeof(s64), GFP_KERNEL);
 	lb->head = 0;
 
+	if (lb->elems == NULL)
+		goto exit_failure;
+
 	for (i = 0; i < size; i++)
 		lb->elems[i] = elem;
+
+	return 0;
+
+exit_failure:
+	return 1;
 }
 
 void lookback_release(struct lookback *lb)

@@ -11,19 +11,16 @@ inline s64 sqr(s64 x)
 }
 
 
-s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
+s64 control_process(struct model *md, s64 rtt_meas, bool probe)
 {
 	s64 rate_opt = md->rate_last;
 	s64 diff = md->rate_last - md->rate_last2;
 
-	// Convert for internal units.
-	rate >>= 20;
-
-	if(diff != 0)
+	if (diff != 0)
 		md->a = (rtt_meas - md->rtt_last)*MPC_ONE/diff;
 
-	if(rate != 0) {
-		rate_opt = rate;
+	if (probe) {
+		rate_opt = MPC_MAX_RATE;
 		md->dstats.probing = true;
 	} else {
 		s64 k1 = md->k1;
@@ -36,7 +33,7 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		s64 t1 = k2*sqr(ml)/2 - a*rtt_meas*sqr(mr);
 		s64 t2 = k1*sqr(ml) + sqr(a)*sqr(mr)/MPC_ONE;
 
-		if(t2 != 0)
+		if (t2 != 0)
 			rate_opt += t1/t2;
 		else
 			rate_opt += 1;
@@ -44,10 +41,8 @@ s64 control_process(struct model *md, s64 rtt_meas, s64 rate)
 		md->dstats.probing = false;
 	}
 
-	if(rate_opt < 100)
-		rate_opt = 100;
-	else if(rate_opt > 100<<10)
-		rate_opt = 100<<10;
+	// Clamp rate
+	rate_opt = min_t(s64, max_t(s64, rate_opt, MPC_MIN_RATE), MPC_MAX_RATE);
 
 	md->rtt_last = rtt_meas;
 	md->rate_last2 = md->rate_last;

@@ -15,7 +15,7 @@ struct lookback {
 	size_t head;
 };
 
-void lookback_init(struct lookback *lb, size_t size, s64 elem);
+int lookback_init(struct lookback *lb, size_t size, s64 elem);
 void lookback_release(struct lookback *lb);
 
 // Add an observation to the lookback.
