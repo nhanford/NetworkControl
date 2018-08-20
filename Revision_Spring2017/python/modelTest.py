@@ -17,7 +17,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-MD = 0.05
+C1 = 0.0
+C2 = 1.0
 W = 0.1
 
 NUM_DATA_POINTS = 200
@@ -34,7 +35,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(MD, W)
+        rateler = Controller(C1, C2, W)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
