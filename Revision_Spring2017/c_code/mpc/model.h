@@ -24,7 +24,6 @@ struct model {
 
 	size_t p;
 	size_t q;
-	size_t probe_cnt;
 
 	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
 	s32 alpha;

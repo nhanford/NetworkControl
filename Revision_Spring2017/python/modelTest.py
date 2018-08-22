@@ -177,7 +177,7 @@ if __name__ == "__main__":
     tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
             "Switch Offset to Constant Latency")
 
-    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
+    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0.1),
             "Fridovich's Original Model")
 
     tester.results()

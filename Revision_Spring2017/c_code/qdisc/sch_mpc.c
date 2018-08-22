@@ -24,7 +24,7 @@
 
 
 #define MAX_FLOWS (1 << 10)
-#define INTER_PROBE_TIME_NS (10*NSEC_PER_SEC)
+#define INTER_TRAIN_TIME_NS (10*NSEC_PER_SEC)
 #define HT_BITS (5)
 
 
@@ -39,8 +39,11 @@ struct mpc_flow {
 	struct sk_buff *tail;
 	size_t qlen;
 
-	// The pacing rate to send in bytes per second.
-	u64 rate;
+	// The pacing rate to send in bytes per second, set by model and
+	// measured, respectively.
+	u64 set_rate;
+	u64 meas_rate;
+	u64 time_last_sent;
 
 	// The time at which the next packet should be sent.
 	u64 time_to_send;
@@ -48,7 +51,8 @@ struct mpc_flow {
 	// Last smoothed rtt seen by the model.
 	u32 last_srtt;
 
-	u64 probe_time_to_start;
+	u64 train_time_to_start;
+	u64 training_left;
 
 	struct model md;
 };
@@ -81,12 +85,16 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->tail = NULL;
 	flow->qlen = 0;
 
-	flow->rate = 0;
+	flow->set_rate = 0;
+	flow->meas_rate = 0;
+	flow->time_last_sent = 0;
+
 	flow->time_to_send = 0;
 
 	flow->last_srtt = 0;
 
-	flow->probe_time_to_start = 0;
+	flow->train_time_to_start = 0;
+	flow->training_left = 0;
 
 	return model_init(&flow->md, 100, 10, 50, 50, 5, 1);
 }
@@ -137,10 +145,10 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 now)
 {
 	u64 min_delay;
 
-	if (flow->rate == 0)
+	if (flow->set_rate == 0)
 		min_delay = 0;
 	else
-		min_delay = NSEC_PER_SEC * flow->head->len / flow->rate;
+		min_delay = NSEC_PER_SEC * flow->head->len / flow->set_rate;
 
 	// Take the max here to ensure that we don't go past the max rate on a
 	// burst.
@@ -165,14 +173,21 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 	else
 		rtt = 0;
 
-	flow->last_srtt = srtt_us;
+	flow->set_rate = control_process(&flow->md, rtt, flow->meas_rate);
 
-	if (now >= flow->probe_time_to_start) {
-		flow->probe_time_to_start = now + INTER_PROBE_TIME_NS;
-		flow->rate = control_process(&flow->md, rtt, true);
+	if (flow->training_left > 0) {
+		flow->md.dstats.probing = true;
+		flow->training_left--;
+		flow->set_rate = 0;
+
+		if (flow->training_left == 0)
+			flow->train_time_to_start = now + INTER_TRAIN_TIME_NS;
+	} else if (flow->train_time_to_start <= now) {
+		flow->training_left = control_rollover(&flow->md) << 10;
 	} else {
-		flow->rate = control_process(&flow->md, rtt, false);
+		flow->md.dstats.probing = false;
 	}
+
 }
 
 
@@ -312,16 +327,19 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	skb = flow_dequeue(flow);
 	mpc_del_flow(sch, flow);
 
+	flow->meas_rate = flow->meas_rate*7/8 +
+		skb->len*NSEC_PER_SEC/(now - flow->time_last_sent)/8;
+
+	flow->time_last_sent = now;
+
 	if (flow->qlen > 0) {
 		flow_update_time_to_send(flow, now);
 		mpc_add_flow(sch, flow);
 	}
 
 	// Update rate using MPC.
-	if (skb != NULL && skb->sk != NULL
-		&& skb->sk->sk_protocol == IPPROTO_TCP) {
+	if (skb->sk != NULL && skb->sk->sk_protocol == IPPROTO_TCP) {
 		struct tcp_sock *tp = tcp_sk(skb->sk);
-
 		flow_update_rate(flow, tp->srtt_us, now);
 	}
 

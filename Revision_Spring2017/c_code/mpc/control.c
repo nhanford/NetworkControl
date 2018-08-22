@@ -15,14 +15,29 @@ static s64 control_predict(struct model *md);
 static void control_update(struct model *md, s64 rtt_meas);
 
 
-s64 control_process(struct model *md, s64 rtt_meas, bool probe)
+size_t control_rollover(struct model *md)
+{
+	return max_t(size_t, md->p, md->q);
+}
+
+
+s64 control_process(struct model *md, s64 rtt_meas, s64 rate_meas)
 {
 	s64 b0 = md->b[0];
-	s64 rate_opt = *lookback_index(&md->lb_pacing_rate, 0);
+	s64 rate_opt;
+
+	// Convert to internal units.
+	rate_meas >>= 20;
+
+	// Now we set predicted RTT to include the control.
+	*lookback_index(&md->lb_pacing_rate, 0) = rate_meas;
+	md->predicted_rtt = control_predict(md);
+	rate_opt = rate_meas;
 
 	// debug.
 	md->dstats.rtt_meas_us = rtt_meas;
 	md->dstats.rtt_pred_us = md->predicted_rtt;
+
 
 	control_update(md, rtt_meas);
 
@@ -31,46 +46,26 @@ s64 control_process(struct model *md, s64 rtt_meas, bool probe)
 	md->avg_rtt_var = max_t(s64, 1, wma(md->gamma, md->avg_rtt_var,
 				sqr(md->predicted_rtt - md->avg_rtt)));
 
-	if (probe)
-		md->probe_cnt = max_t(size_t, md->p, md->q);
+	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_meas);
 
 
 	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
 	lookback_add(&md->lb_pacing_rate, 0);
 	md->predicted_rtt = control_predict(md);
 
-	if (md->probe_cnt > 0) {
-		rate_opt = MPC_MAX_RATE;
-		md->probe_cnt--;
-
-		md->dstats.probing = true;
-	} else if (md->avg_rtt > 0 && md->avg_rtt_var > 0
+	if (md->avg_rtt > 0 && md->avg_rtt_var > 0
 			&& md->avg_pacing_rate > 0 && b0 > 0) {
 		// NOTE: Make sure MPC_ONE offsets anything scaled by it. psi, xi,
 		// gamma, alpha, a[*], b[*].
-		s64 cd = 2*b0*md->psi/MPC_ONE;
-		s64 t1 = md->avg_rtt_var * md->xi
-			/ (cd * b0 * md->avg_pacing_rate) * MPC_ONE;
-		s64 t2 = md->avg_rtt / b0 * MPC_ONE;
-		s64 t3 = md->avg_rtt_var / (cd * md->avg_rtt) * MPC_ONE;
-		s64 t4 = md->predicted_rtt / b0 * MPC_ONE;
-		s64 t5 = t1 + t2;
-		s64 t6 = t3 + t4;
+		s64 t1 = md->xi/md->avg_pacing_rate - b0/md->avg_rtt;
+		s64 t2 = md->avg_rtt_var*sqr(MPC_ONE)/(2*md->psi*b0);
 
-		if (t5 > t6)
-			rate_opt = t5 - t6;
-
-		md->dstats.probing = false;
+		rate_opt = (t1*t2/MPC_ONE + md->avg_rtt - md->predicted_rtt)
+			* MPC_ONE/b0;
 	}
 
 	// Clamp rate
 	rate_opt = min_t(s64, max_t(s64, rate_opt, MPC_MIN_RATE), MPC_MAX_RATE);
-
-	// Now we set predicted RTT to include the control.
-	*lookback_index(&md->lb_pacing_rate, 0) = rate_opt;
-	md->predicted_rtt = control_predict(md);
-
-	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_opt);
 
 	// Convert for external units.
 	rate_opt <<= 20;

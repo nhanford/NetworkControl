@@ -21,7 +21,6 @@ int model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
 
 	md->p = p;
 	md->q = q;
-	md->probe_cnt = 0;
 
 	md->alpha = alpha*MPC_ONE/100;
 
