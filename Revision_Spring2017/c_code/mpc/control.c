@@ -11,18 +11,21 @@ inline s64 sqr(s64 x)
 }
 
 
-s64 control_process(struct model *md, s64 rtt_meas, bool probe)
+size_t control_rollover(struct model *md)
+{
+	return 2;
+}
+
+
+s64 control_process(struct model *md, s64 rtt_meas, s64 rate_meas)
 {
 	s64 rate_opt = md->rate_last;
-	s64 diff = md->rate_last - md->rate_last2;
+	s64 diff = rate_meas - md->rate_last;
 
 	if (diff != 0)
 		md->a = (rtt_meas - md->rtt_last)*MPC_ONE/diff;
 
-	if (probe) {
-		rate_opt = MPC_MAX_RATE;
-		md->dstats.probing = true;
-	} else (md->avg_rate != 0 && md->avg_rate_delta != 0) {
+	if (md->avg_rate != 0 && md->avg_rate_delta != 0) {
 		s64 k1 = md->c1*md->avg_rtt/sqr(md->avg_rate_delta);
 		s64 k2 = md->c2*md->avg_rtt/md->avg_rate;
 
@@ -34,8 +37,6 @@ s64 control_process(struct model *md, s64 rtt_meas, bool probe)
 			rate_opt += t1/t2;
 		else
 			rate_opt += 1;
-
-		md->dstats.probing = false;
 	} else {
 		rate_opt += 1;
 	}
@@ -43,15 +44,13 @@ s64 control_process(struct model *md, s64 rtt_meas, bool probe)
 	// Clamp rate
 	rate_opt = min_t(s64, max_t(s64, rate_opt, MPC_MIN_RATE), MPC_MAX_RATE);
 
+	md->pred_rtt = md->a*(rate_meas - md->rate_last)/MPC_ONE + rtt_meas;
 	md->rtt_last = rtt_meas;
-	md->rate_last2 = md->rate_last;
-	md->rate_last = rate_opt;
-	md->pred_rtt = md->a*(md->rate_last - md->rate_last2)/MPC_ONE + rtt_meas;
+	md->rate_last = rate_meas;
 
 	md->avg_rtt = wma(md->weight, md->avg_rtt, rtt_meas);
-	md->avg_rate = wma(md->weight, md->avg_rate, rate_opt);
-	md->avg_rate_delta = wma(md->weight, md->avg_rate,
-				md->rate_last - md->rate_last2);
+	md->avg_rate = wma(md->weight, md->avg_rate, rate_meas);
+	md->avg_rate_delta = wma(md->weight, md->avg_rate, diff);
 
 	// Convert for external units.
 	rate_opt <<= 20;

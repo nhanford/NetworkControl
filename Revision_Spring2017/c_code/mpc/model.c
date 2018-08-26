@@ -12,7 +12,6 @@ int model_init(struct model *md, s64 c1, s64 c2, s64 weight)
 
 	md->rtt_last = 0;
 	md->rate_last = 0;
-	md->rate_last2 = 0;
 	md->a = 0;
 
 	md->avg_rtt = 0;

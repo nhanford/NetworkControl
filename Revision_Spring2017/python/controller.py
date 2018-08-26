@@ -6,53 +6,57 @@
 #
 ################################################################################
 
+from collections import deque
 import numpy as np
-import random
 
 class Controller:
-    def __init__(self, c1, c2, weight):
-        self.c1 = c1
-        self.c2 = c2
+    def __init__(self, numObs, k1, k2, weight):
+        self.k1 = k1
+        self.k2 = k2
         self.weight = weight
 
-        self.rttLast = 0.0
-        self.rateLast = 0.0
-        self.rateLast2 = 0.0
-        self.a = 0.0
+        self.rtt = deque([0], numObs)
+        self.rate = deque([0], numObs)
 
-        self.avgRTT = 0.0
-        self.avgRate = 0.0
-        self.avgRateDelta = 0.0
-        self.predRTT = 0.0
+        self.rttAvg = 0
+        self.rateAvg = 0
+
+    def wma(self, avg, x):
+        return (1 - self.weight)*avg + self.weight*x
 
     def process(self, rtt):
-        diff = self.rateLast - self.rateLast2
-        rate = self.rateLast
+        m = []
+        b = []
 
-        self.avgRTT = (1 - self.weight)*self.avgRTT + self.weight*rtt
-        self.avgRate = (1 - self.weight)*self.avgRate + self.weight*self.rateLast
-        self.avgRateDelta = (1 - self.weight)*self.avgRateDelta + self.weight*diff
+        for i in range(1, len(self.rtt) + 1):
+            m.append([self.rate[-i]**2, self.rate[-i], 1])
+            b.append(self.rtt[-i])
 
-        if diff != 0:
-            self.a = (rtt - self.rttLast)/diff
+        m = np.matrix(m)
+        b = np.array(b)
 
-        if self.avgRate != 0 and self.avgRateDelta != 0:
-            k1 = self.c1*self.avgRTT/self.avgRateDelta**2
-            k2 = self.c2*self.avgRTT/self.avgRate
+        try:
+            res = np.linalg.lstsq(m, b)
+            ((a, b, c), _, _, _) = res
+        except np.linalg.LinAlgError:
+            (a, b, c) = (0, 0, self.rtt[-1])
+
+        t1 = self.k2 * self.rttAvg - self.k1 * b * self.rateAvg
+        t2 = 2 * self.k1 * a * self.rateAvg
+
+        if (self.rttAvg == 0 or self.rateAvg == 2 or t2 == 0
+                or 2*self.k1*a/self.rttAvg <= 0):
+            rate = self.rate[-1] + 0.1
         else:
-            k1 = 0
-            k2 = 0
+            rate = t1/t2
 
-        if k1 != 0 or self.a != 0:
-            rate += (k2 - 2*self.a*self.rttLast)/(2*k1 + 2*self.a)
-        else:
-            rate += 1
-
+        rate = self.wma(self.rate[-1], rate)
         rate = min(max(0, rate), 30)
 
-        self.rttLast = rtt
-        self.rateLast2 = self.rateLast
-        self.rateLast = rate
-        self.predRTT = self.a*(self.rateLast - self.rateLast2) + rtt
+        self.rtt.append(rtt)
+        self.rate.append(rate)
 
-        return (rate, self.predRTT)
+        self.rttAvg = self.wma(self.rttAvg, rtt)
+        self.rateAvg = self.wma(self.rateAvg, rate)
+
+        return (rate, a*rate**2 + b*rate + c, a, b, c)

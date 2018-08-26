@@ -17,11 +17,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-C1 = 0.0
-C2 = 1.0
-W = 0.1
+OBS = 64
+K1 = 1.0
+K2 = 1.0/8.0
+W = 1.0/8.0
 
-NUM_DATA_POINTS = 200
+NUM_DATA_POINTS = 2000
 
 
 class Tester:
@@ -35,28 +36,35 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(C1, C2, W)
+        rateler = Controller(OBS, K1, K2, W)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
         predicted_latency = np.zeros(NUM_DATA_POINTS)
         recorded_rate = np.zeros(NUM_DATA_POINTS)
+        a = np.zeros(NUM_DATA_POINTS)
+        b = np.zeros(NUM_DATA_POINTS)
+        c = np.zeros(NUM_DATA_POINTS)
         last_rate = 0.0
 
         for i in range(1, NUM_DATA_POINTS):
             recorded_latency[i] = response.generate(recorded_rate[i - 1])
 
-            (last_rate, predicted_latency[i]) = rateler.process(recorded_latency[i])
+            (last_rate, predicted_latency[i], a[i], b[i], c[i]) = rateler.process(recorded_latency[i])
             recorded_rate[i] = last_rate
 
         plt.figure(self.plotCount_)
         plt.plot(recorded_index, recorded_latency, 'r--',
                  recorded_index, predicted_latency, 'g^',
-                 recorded_index, recorded_rate, 'yo')
-        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate'])
+                 recorded_index, recorded_rate, 'y-',
+                 recorded_index, a, 'ro',
+                 recorded_index, b, 'go',
+                 recorded_index, c, 'bo')
+        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'a', 'b', 'c'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
         plt.ylabel('Arbitrary units')
+        plt.ylim(-5, 30)
         self.plotCount_ += 1
 
     def results(self):
@@ -176,15 +184,17 @@ if __name__ == "__main__":
     tester.test(Offset(10, 5, 2), "Offset Latency")
 
     # Model for when consistency is desired.
-    tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
-            "Offset Latency with Penalized Rate Changes")
+    #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
+    #        "Offset Latency with Penalized Rate Changes")
 
     # Here we switch from offset to constant halfway through. The idea is that
     # this could mimic a probing mode as suggested by Nate.
-    tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
-            "Switch Offset to Constant Latency")
+    #tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
+    #        "Switch Offset to Constant Latency")
 
-    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0),
+    tester.test(Noise(Offset(10, 5, 2), 1), "Noisy Offset Latency")
+
+    tester.test(LatencyGenerator(10.0, 1, 0.1, -0.2, 0.1),
             "Fridovich's Original Model")
 
     tester.results()

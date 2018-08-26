@@ -15,7 +15,6 @@ struct model {
 
 	s64 rtt_last;
 	s64 rate_last;
-	s64 rate_last2;
 	s64 a;
 
 	s64 avg_rtt;
