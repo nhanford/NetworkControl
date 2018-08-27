@@ -41,13 +41,13 @@ elif args.tester == 'bwctl':
 
 
 rate = 0
-end = now() + args.duration
+end = now() + 3*args.duration
 
-while now() < end:
+while now() < end and tester.poll() is None:
     rate = (rate + 100) % 40000
 
     if args.verbose:
-        print("Running test at {}mbit/s. Poll {}".format(rate, tester.poll()))
+        print("Running test at {}mbit/s.".format(rate, tester.poll()))
 
     cp = subprocess.run(['tc', 'qdisc', 'replace', 'dev', args.interface,
         'root', 'netem', 'rate', '{}mbit'.format(rate)])
