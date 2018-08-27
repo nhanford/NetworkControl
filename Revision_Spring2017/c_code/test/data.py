@@ -5,14 +5,24 @@ import numpy as np
 import pandas as pd
 
 
-def lastRowWhere(d, cond):
-    last = None
+def getTestData(inFile):
+    with open(inFile) as data:
+        pdata = json.load(data)
+        strms = list(map(lambda i: i['streams'], pdata['intervals']))
+        strms = [x for y in strms for x in y] # Flatten
 
-    for row in d.iterrows():
-        if not cond(row[1]):
-            return last
-        else:
-            last = row[1]
+        return (pdata, pd.DataFrame(strms))
+
+def getModuleData(inFile):
+    with open(inFile) as data:
+        pdata = json.load(data)
+
+        # columns is for when there are no entries.
+        df = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
+                columns = ["time", "id", "rtt_meas_us", "rtt_pred_us",
+                    "rate_set", "probing"])
+
+        return (pdata, df)
 
 
 class Data(object):
@@ -33,24 +43,10 @@ class Data(object):
         testFile = test + '-test.json'
         moduleFile = test + '-module.json'
 
-        with open(testFile) as data:
-            pdata = json.load(data)
-            startTime = pdata['start']['timestamp']['timesecs']
-            strms = list(map(lambda i: i['streams'], pdata['intervals']))
-            strms = [x for y in strms for x in y] # Flatten
+        (self.rawTest, self.stream) = getTestData(testFile)
+        startTime = self.rawTest['start']['timestamp']['timesecs']
 
-            self.rawTest = pdata
-            self.stream = pd.DataFrame(strms)
+        (self.rawModule, self.module) = getModuleData(moduleFile)
 
-        with open(moduleFile) as data:
-            pdata = json.load(data)
-
-            self.rawModule = pdata
-
-            # columns is for when there are no entries.
-            self.module = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
-                    columns = ["time", "id", "rtt_meas_us", "rtt_pred_us",
-                        "rate_set", "probing"])
-
-            # Normalize times to be the same as those from BWCtl.
-            self.module.time -= startTime
+        # Normalize times to be the same as those from BWCtl.
+        self.module.time -= startTime
