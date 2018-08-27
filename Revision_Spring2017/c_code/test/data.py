@@ -32,7 +32,6 @@ class Data(object):
         """
         testFile = test + '-test.json'
         moduleFile = test + '-module.json'
-        timeFile = test + '-time.txt'
 
         with open(testFile) as data:
             pdata = json.load(data)
