@@ -15,18 +15,19 @@ import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import random
 
 # Adaptive filter parameters.
 ALPHA = 0.5
-P = 5
-Q = 1
+P = 8
+Q = 8
 
 # Controller parameters.
 PSI = 1.0
 XI = 0.1
 GAMMA = 0.5
 
-NUM_DATA_POINTS = 200
+NUM_DATA_POINTS = 2000
 
 
 class Tester:
@@ -111,6 +112,18 @@ class Switch:
         else:
             return self.sndRes_.generate(rate)
 
+class Noise:
+    """
+    Adds some noise to latency.
+    """
+
+    def __init__(self, response, noise):
+        self.response_ = response
+        self.noise_ = noise
+
+    def generate(self, rate):
+        return self.response_.generate(rate) + random.uniform(0, self.noise_)
+
 class VarRatePenalizer:
     """
     Penalizes variations in rate. The more rapid the greater the penalty.
@@ -167,17 +180,18 @@ if __name__ == "__main__":
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
     tester.test(Offset(10, 5, 2), "Offset Latency")
+    tester.test(Noise(Offset(10, 5, 2), 0.5), "Offset Latency with Noise")
 
     # Model for when consistency is desired.
-    tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
-            "Offset Latency with Penalized Rate Changes")
+    #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
+    #        "Offset Latency with Penalized Rate Changes")
 
     # Here we switch from offset to constant halfway through. The idea is that
     # this could mimic a probing mode as suggested by Nate.
-    tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
-            "Switch Offset to Constant Latency")
+    #tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
+    #        "Switch Offset to Constant Latency")
 
-    tester.test(LatencyGenerator(1.0, 0.01, 0.1, -0.02, 0.1),
+    tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
             "Fridovich's Original Model")
 
     tester.results()
