@@ -19,7 +19,7 @@ import random
 
 OBS = 64
 K1 = 1.0
-K2 = 1.0/8.0
+K2 = 1.0/4.0
 W = 1.0/8.0
 
 NUM_DATA_POINTS = 2000
@@ -56,10 +56,10 @@ class Tester:
         plt.figure(self.plotCount_)
         plt.plot(recorded_index, recorded_latency, 'r--',
                  recorded_index, predicted_latency, 'g^',
-                 recorded_index, recorded_rate, 'y-',
-                 recorded_index, a, 'ro',
-                 recorded_index, b, 'go',
-                 recorded_index, c, 'bo')
+                 recorded_index, recorded_rate, 'y-')
+                 #recorded_index, a, 'ro',
+                 #recorded_index, b, 'go',
+                 #recorded_index, c, 'bo')
         plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'a', 'b', 'c'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     tester.test(Noise(Offset(10, 5, 2), 1), "Noisy Offset Latency")
 
-    tester.test(LatencyGenerator(10.0, 1, 0.1, -0.2, 0.1),
+    tester.test(LatencyGenerator(10.0, 0.1, 0.1, -0.2, 0.1),
             "Fridovich's Original Model")
 
     tester.results()

@@ -45,7 +45,7 @@ class Controller:
         t2 = 2 * self.k1 * a * self.rateAvg
 
         if (self.rttAvg == 0 or self.rateAvg == 2 or t2 == 0
-                or 2*self.k1*a/self.rttAvg <= 0):
+                or a <= 0):
             rate = self.rate[-1] + 0.1
         else:
             rate = t1/t2
