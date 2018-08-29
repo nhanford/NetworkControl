@@ -17,12 +17,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-OBS = 64
+OBS = 100
 K1 = 1.0
 K2 = 1.0/4.0
-W = 1.0/8.0
+W = 1.0/4.0
 
-NUM_DATA_POINTS = 2000
+NUM_DATA_POINTS = 20000
 
 
 class Tester:
@@ -151,8 +151,9 @@ class LatencyGenerator:
     Latency generator implemented by David Fridovich.
     """
 
-    def __init__(self, l_max, l_slope, l_cut, r_coeff, noise_sd = 0.1):
+    def __init__(self, l_max, l_min, l_slope, l_cut, r_coeff, noise_sd = 0.1):
         self.l_max_ = l_max # Maximum value of latency before packet drop.
+        self.l_min_ = l_min # Minimum value of latency before packet drop.
         self.l_slope_ = l_slope # Increment size for linear latency growth.
         self.l_cut_ = l_cut # Cuts back to this fraction of maximum after drop.
         self.r_coeff_ = r_coeff # Coefficient of most recent control input.
@@ -162,12 +163,11 @@ class LatencyGenerator:
         self.l_ = 0.0
 
     def generate(self, r):
-        self.l_ += (self.l_slope_ + self.r_coeff_ * r +
-                    self.noise_sd_ * np.random.randn())
+        self.l_ += (self.l_slope_ + self.r_coeff_ * r)
         if self.l_ > self.l_max_:
             self.l_ *= self.l_cut_
 
-        self.l_ = max(0.0, self.l_)
+        self.l_ = max(self.l_min_, self.l_) + self.noise_sd_ * np.random.randn()
 
         return self.l_
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     tester.test(Noise(Offset(10, 5, 2), 1), "Noisy Offset Latency")
 
-    tester.test(LatencyGenerator(10.0, 0.1, 0.1, -0.2, 0.1),
+    tester.test(LatencyGenerator(10.0, 2.0, 0.1, 0.25, -0.2, 0.1),
             "Fridovich's Original Model")
 
     tester.results()

@@ -8,6 +8,7 @@
 
 from collections import deque
 import numpy as np
+import random
 
 class Controller:
     def __init__(self, numObs, k1, k2, weight):
@@ -50,7 +51,7 @@ class Controller:
         else:
             rate = t1/t2
 
-        rate = self.wma(self.rate[-1], rate)
+        rate = self.wma(self.rate[-1], rate) + random.uniform(-0.1, 0.1)
         rate = min(max(0, rate), 30)
 
         self.rtt.append(rtt)
