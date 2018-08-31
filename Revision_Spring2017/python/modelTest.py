@@ -17,16 +17,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-# Adaptive filter parameters.
-ALPHA = 0.5
-P = 8
-Q = 8
-
-# Controller parameters.
-PSI = 1.0
-XI = 0.1
-GAMMA = 0.5
-
 NUM_DATA_POINTS = 2000
 
 
@@ -41,7 +31,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
+        rateler = Controller(0)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
@@ -52,7 +42,7 @@ class Tester:
         for i in range(1, NUM_DATA_POINTS):
             recorded_latency[i] = response.generate(recorded_rate[i - 1])
 
-            (last_rate, predicted_latency[i]) = rateler.Process(recorded_latency[i])
+            (last_rate, predicted_latency[i]) = rateler.process(recorded_latency[i], i)
             recorded_rate[i] = last_rate
 
         plt.figure(self.plotCount_)
@@ -92,6 +82,18 @@ class Offset:
 
     def generate(self, rate):
         return self.bestLat_ + self.rateSens_ * abs(self.optRate_ - rate)
+
+class Inverse:
+    def __init__(self, a, minRTT, maxRTT):
+        self.a_ = a
+        self.minRTT_ = minRTT
+        self.maxRTT_ = maxRTT
+
+    def generate(self, rate):
+        if rate > 0:
+            return max(self.minRTT_, min(self.a_/rate, self.maxRTT_))
+        else:
+            return self.maxRTT_
 
 class Switch:
     """
@@ -181,6 +183,8 @@ if __name__ == "__main__":
     # other considerations.
     tester.test(Offset(10, 5, 2), "Offset Latency")
     tester.test(Noise(Offset(10, 5, 2), 0.5), "Offset Latency with Noise")
+
+    tester.test(Noise(Inverse(30, 1, 30), 0.5), "Inverse")
 
     # Model for when consistency is desired.
     #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
