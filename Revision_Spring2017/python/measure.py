@@ -13,7 +13,9 @@ parser.add_argument('destination', type = str,
         help = "The destination server address.")
 parser.add_argument('interface', type = str,
         help = "The interface to attach the qdisc to.")
-parser.add_argument('-m', '--max-rate', type = int, default = 40000,
+parser.add_argument('-m', '--min-rate', type = int, default = 100,
+        help = "Min rate (in mbits/s) to test at.")
+parser.add_argument('-x', '--max-rate', type = int, default = 40000,
         help = "Max rate (in mbits/s) to test at.")
 parser.add_argument('-d', '--duration', type = float, default = 60,
         help = "Logging duration in seconds.")
@@ -46,7 +48,7 @@ rate = 0
 end = now() + 3*args.duration
 
 while now() < end and tester.poll() is None:
-    rate = (rate + 100) % (args.max_rate + 1)
+    rate = max(args.min_rate, (rate + 100) % (args.max_rate + 1))
 
     if args.verbose:
         print("Running test at {}mbit/s.".format(rate, tester.poll()))
