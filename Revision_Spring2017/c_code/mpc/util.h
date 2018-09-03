@@ -9,7 +9,7 @@
 #endif
 
 // Bytes/s
-#define MPC_MIN_RATE (1UL)
+#define MPC_MIN_RATE (10UL)
 #define MPC_MAX_RATE (100UL << 10)
 
 #define MPC_ONE 128

@@ -31,6 +31,14 @@ static inline s64 *lookback_index(struct lookback *lb, size_t idx)
 		return &lb->elems[lb->head - idx];
 }
 
+// Index an observation, starting with the oldest one, and returning a pointer
+// to it. Doesn't do bound checks.
+static inline s64 *lookback_index_old(struct lookback *lb, size_t idx)
+{
+	idx = (idx + 1) % lb->size;
+	return &lb->elems[lb->head + idx];
+}
+
 // The number of observations being tracked.
 static inline size_t lookback_size(struct lookback *lb)
 {

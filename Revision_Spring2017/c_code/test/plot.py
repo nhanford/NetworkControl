@@ -45,7 +45,7 @@ cwnd_adj = data.stream.snd_cwnd/(1<<10)
 
 mpcRTT_adj = data.module.rtt_meas_us/1000
 mpcRTTPred_adj = data.module.rtt_pred_us/1000
-mpcRate_adj = 8*data.module.rate_set/(1 << 20)
+mpcRate_adj = 8*data.module.rate_set
 
 
 bwfig, bwax = plt.subplots(2, 2, figsize=(10, 10))
