@@ -31,12 +31,18 @@ struct model {
 	s64 sum_rtt;
 	s64 sum_rtt_rate;
 
+	bool probing;
+	unsigned int probe_shift;
+	unsigned int probe_inter_period;
+	unsigned int probe_countdown;
+
 	// For debugging.
 	struct mpc_dfs_stats dstats;
 };
 
 // time is in us.
-int model_init(struct model *md, s64 time, size_t num_obs);
+int model_init(struct model *md, s64 time, size_t num_obs, unsigned int shift,
+		unsigned int period);
 
 void model_release(struct model *md);
 

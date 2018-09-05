@@ -4,22 +4,28 @@
 #include "model.h"
 
 
-int model_init(struct model *md, s64 time, size_t num_obs)
+int model_init(struct model *md, s64 time, size_t num_obs, unsigned int shift,
+		unsigned int period)
 {
-        md->m = 0;
-        md->b = 0;
+	md->m = 0;
+	md->b = 0;
 
-        md->start_time = time;
-        md->last_time = time;
+	md->start_time = time;
+	md->last_time = time;
 
-        md->integral = 0;
+	md->integral = 0;
 
-        md->num_obs = num_obs;
+	md->num_obs = num_obs;
 	if (lookback_init(&md->lb_rtt, num_obs, 0))
 		goto exit_failure_a;
 
 	if (lookback_init(&md->lb_rate, num_obs, 0))
 		goto exit_failure_b;
+
+	md->probing = true;
+	md->probe_shift = shift;
+	md->probe_inter_period = period;
+	md->probe_countdown = num_obs;
 
 	mpc_dfs_init(&md->dstats);
 

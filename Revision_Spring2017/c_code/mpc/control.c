@@ -22,7 +22,7 @@ size_t control_rollover(struct model *md)
 
 s64 control_process(struct model *md, s64 time, s64 rtt_meas, s64 rate_meas)
 {
-	s64 rate;
+	s64 rate = *lookback_index(&md->lb_rate, 0);
 	s64 opt;
 
 	// debug.
@@ -31,19 +31,38 @@ s64 control_process(struct model *md, s64 time, s64 rtt_meas, s64 rate_meas)
 	if (rtt_meas > 0 && rate_meas > 0)
 		control_update(md, rtt_meas, rate_meas);
 	else
-		goto increment;
+		goto exit;
 
-	if (md->m == 0)
-		goto increment;
-	else
-		opt = -md->b/md->m;
+	if (md->probing) {
+		md->probe_countdown--;
+		if (md->probe_countdown == 0) {
+			md->probing = false;
+			md->probe_countdown = md->probe_inter_period;
+		} else {
+			rate = max_t(u64, MPC_MIN_RATE, rate << 1);
+		}
+	} else {
+		md->probe_countdown--;
+		if (md->probe_countdown == 0) {
+			md->probing = true;
+			md->probe_countdown = control_rollover(md);
+			rate >>= md->probe_shift;
+			goto exit;
+		}
 
-	opt = max_t(s64, MPC_MIN_RATE, min_t(s64, opt, MPC_MAX_RATE));
+		if (md->m == 0)
+			goto exit;
+		else
+			opt = -md->b/md->m;
 
-	md->integral += opt*(time - md->last_time);
-	rate = md->integral/(time - md->start_time);
-	md->last_time = time;
+		opt = max_t(s64, MPC_MIN_RATE, min_t(s64, opt, MPC_MAX_RATE));
 
+		md->integral += opt*(time - md->last_time);
+		rate = wma(MPC_ONE/64, *lookback_index(&md->lb_rate, 0), opt);//md->integral/(time - md->start_time);
+		md->last_time = time;
+	}
+
+exit:
 	rate = max_t(s64, MPC_MIN_RATE, min_t(s64, rate, MPC_MAX_RATE));
 
 	// debug
@@ -51,8 +70,6 @@ s64 control_process(struct model *md, s64 time, s64 rtt_meas, s64 rate_meas)
 	md->dstats.rtt_pred_us = md->m*rate/MPC_ONE + md->b/MPC_ONE;
 
 	return rate;
-increment:
-	return *lookback_index(&md->lb_rate, 0) + MPC_MIN_RATE;
 }
 
 

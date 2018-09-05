@@ -96,7 +96,7 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->train_time_to_start = 0;
 	flow->training_left = 0;
 
-	return model_init(&flow->md, ktime_get_ns()/NSEC_PER_USEC, 32);
+	return model_init(&flow->md, ktime_get_ns()/NSEC_PER_USEC, 128, 8, 128);
 }
 
 static void flow_release(struct mpc_flow *flow)

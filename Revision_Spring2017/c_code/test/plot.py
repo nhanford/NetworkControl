@@ -60,6 +60,7 @@ ax6 = modax[0][0]
 #ax7 = ax6.twinx()
 ax8 = modax[0][1]
 ax9 = ax8.twinx()
+ax10 = modax[1][0]
 
 ax1.plot(data.stream.start, rtt_adj, 'r', label = 'RTT')
 ax1.set_xlabel('Time (s)')
@@ -93,6 +94,10 @@ ax8.set_ylabel('MPC Rate (mbit/s)')
 ax9.plot(data.module.time, data.module.probing, 'go', label = 'Probing')
 ax9.set_ylabel('Probing')
 
+ax10.plot(mpcRate_adj, mpcRTT_adj, 'yo', label = 'Rate/RTT')
+ax8.set_xlabel('MPC Rate (mbit/s)')
+ax6.set_ylabel('MPC RTT (ms)')
+
 
 if args.limit_quantile is not None:
     ax1.set_ylim(0, rtt_adj.quantile(args.limit_quantile)*2)
@@ -110,6 +115,9 @@ if args.limit_quantile is not None:
         ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
 
     ax9.set_ylim(-1, 2)
+
+    if len(mpcRTT_adj) > 0:
+        ax6.set_ylim(0, mpcRTT_adj.quantile(args.limit_quantile)*2)
 
 bwfig.legend()
 bwfig.suptitle("BWCTL")
