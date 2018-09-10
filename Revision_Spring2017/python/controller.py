@@ -1,84 +1,84 @@
-################################################################################
-#
-# Author: David Fridovich-Keil ( dfk@eecs.berkeley.edu )
-# File: controller.py
-#
-# Controller implementation. The controller holds an adaptive filter inside
-# which constantly updates its internal predictive model as new data arrives.
-#
-################################################################################
 
-from adaptive_filter import AdaptiveFilter
-
+from collections import deque
 import numpy as np
+
+INF = 1000
 
 class Controller:
 
-    def __init__(self, psi, xi, gamma, p, q, alpha):
-        """ Constructor. """
+    def __init__(self, rateDiff, percRTT, percMax, weight, period, numObs):
+        self.rateDiff = rateDiff
+        self.percRTT = percRTT
+        self.percMax = percMax
+        self.weight = weight
+        self.period = period
+        self.numObs = numObs
 
-        self.psi_ = psi # Coefficient of variance term.
-        self.xi_ = xi # Coefficient of throughput term.
-        self.gamma_ = gamma # Parameter in nominal latency estimator.
+        self.rB = 0
+        self.reset()
 
-        # Estimated nominal latency.
-        self.mu_latency_ = 0.0
-        self.mu_variance_ = 0.0
-        self.mu_control_ = 1.0
+    def reset(self):
+        self.timer = self.period
+        self.startProbe = self.numObs
 
-        # Keep an adaptive filter as the dynamics model.
-        self.model_ = AdaptiveFilter(p, q, alpha)
+        self.rate = deque([0]*self.numObs, self.numObs)
+        self.rtt = deque([0]*self.numObs, self.numObs)
+        self.x = deque([0]*self.numObs, self.numObs)
 
-        # Most recent prediction.
-        self.l_hat_ = self.model_.Predict()
+        self.lhat = 0
 
-    def Process(self, l, r = None):
-        """
-        Process a new latency/control pair. Two steps:
-        (1) updates internal model, and
-        (2) computes optimal control.
-        """
+        self.avgRB = 0
+        self.varRB = 0
 
-        # (1) Update internal model.
-        self.model_.Update(l, self.l_hat_)
+        self.a = 0
+        self.rB = self.rB/2
+        self.lB = 0
+        self.lP = INF
 
-        self.mu_latency_ = (1.0 - self.gamma_) * l + self.gamma_ * self.mu_latency_
-        self.mu_variance_ = ((1.0 - self.gamma_) * (self.l_hat_ - self.mu_latency_)**2 +
-                             self.gamma_ * self.mu_variance_)
+    def process(self, r, l):
+        self.update(r, l)
 
-        # (2) Compute optimal control.
-        self.l_hat_ = self.model_.Predict(0.0, True)
+        self.timer -= 1
 
-        # Normalize coefficients before solving for optimal control.
-        psi = self.psi_ / self.mu_variance_
-        xi = self.xi_ / self.mu_control_
-        b0 = self.model_.b_[0]
-
-        r_opt = ((xi - b0 / self.mu_latency_) * (0.5 / (psi * b0)) +
-                 self.mu_latency_ - self.l_hat_) / b0
-
-        """
-        (self.mu_ - self.l_hat_ +
-                 ((self.xi_ - self.model_.b_[0]) /
-                  (self.psi_ * self.model_.b_[0]))) / self.model_.b_[0]
-        """
-
-        # Threshold the output.
-        # TODO! Make these bounds less arbitrary.
-        r_opt = max(0.1, min(r_opt, 34.35))
-
-        if r is not None:
-            self.model_.r_.appendleft(r)
-            self.l_hat_ += self.model_.b_[0] * r
+        if self.startProbe > 0 or self.varRB > (self.rateDiff/2)**2:
+            self.startProbe -= 1
+            opt = self.rB + self.rateDiff
+        elif np.mean(self.x) > self.percRTT * self.rtt[0] or self.timer <= 0:
+            self.reset()
+            opt = self.rB + self.rateDiff
         else:
-            self.model_.r_.appendleft(r_opt)
-            self.l_hat_ += self.model_.b_[0] * r_opt
+            opt = self.percMax * self.rB
+        opt = min(max(0.1, opt), 30)
 
-        # Update control mean.
-        if r is not None:
-            self.mu_control_ = (1.0 - self.gamma_) * r + self.gamma_ * self.mu_control_
-        else:
-            self.mu_control_ = (1.0 - self.gamma_) * r_opt + self.gamma_ * self.mu_control_
+        xhat = self.x[0] + (r - self.rB)
+        xhat = min(max(0, xhat), self.lB - self.lP)
+        self.lhat = self.a/opt + self.lP + xhat
 
-        # Return both optimal control and predicted latency.
-        return (r_opt, self.l_hat_)
+        return (opt, self.lhat)
+
+    def update(self, r, l):
+        self.rate.appendleft(r)
+        self.rtt.appendleft(l)
+
+        A = np.column_stack([self.rate, np.ones(len(self.rate))])
+        b = self.rtt
+
+        if len(A) > 0:
+            (aNew, _) = np.linalg.lstsq(A, b)[0]
+            if aNew > 0 and aNew < INF:
+                self.a = aNew
+
+            if r > 0:
+                self.x.appendleft(max(0, l - self.a/r - self.lP))
+
+        self.lB = max(self.lB, l)
+        self.lP = min(self.lP, l)
+
+        # Estimate rB
+        self.rB = max(self.rB, (self.x[1] + r)/(self.x[0] + 1))
+
+        self.avgRB = self.wma(self.avgRB, self.rB)
+        self.varRB = self.wma(self.varRB, (self.rB - self.avgRB)**2)
+
+    def wma(self, avg, x):
+        return (1 - self.weight)*avg + self.weight*x

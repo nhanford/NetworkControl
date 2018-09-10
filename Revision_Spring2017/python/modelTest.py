@@ -17,15 +17,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-# Adaptive filter parameters.
-ALPHA = 0.5
-P = 8
-Q = 8
-
-# Controller parameters.
-PSI = 1.0
-XI = 0.1
-GAMMA = 0.5
+RATED = 1.0
+PRTT = 0.1
+PM = 0.90
+W = 1.0/4.0
+PERIOD = 1000
+OBS = 32
 
 NUM_DATA_POINTS = 2000
 
@@ -41,28 +38,42 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(PSI, XI, GAMMA, P, Q, ALPHA)
+        rateler = Controller(RATED, PRTT, PM, W, PERIOD, OBS)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
         predicted_latency = np.zeros(NUM_DATA_POINTS)
         recorded_rate = np.zeros(NUM_DATA_POINTS)
+        x = np.zeros(NUM_DATA_POINTS)
+        a = np.zeros(NUM_DATA_POINTS)
+        rB = np.zeros(NUM_DATA_POINTS)
+        lP = np.zeros(NUM_DATA_POINTS)
         last_rate = 0.0
 
         for i in range(1, NUM_DATA_POINTS):
             recorded_latency[i] = response.generate(recorded_rate[i - 1])
 
-            (last_rate, predicted_latency[i]) = rateler.Process(recorded_latency[i])
+            (last_rate, predicted_latency[i]) = rateler.process(last_rate, recorded_latency[i])
             recorded_rate[i] = last_rate
+
+            x[i] = rateler.x[0]
+            a[i] = rateler.a
+            rB[i] = rateler.rB
+            lP[i] = rateler.lP
 
         plt.figure(self.plotCount_)
         plt.plot(recorded_index, recorded_latency, 'r--',
                  recorded_index, predicted_latency, 'g^',
-                 recorded_index, recorded_rate, 'yo')
-        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate'])
+                 recorded_index, recorded_rate, 'yo',
+                 recorded_index, x, 'y-',
+                 recorded_index, a, 'r-',
+                 recorded_index, rB, 'g-',
+                 recorded_index, lP, 'b-')
+        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'x', 'a', 'rB', 'lP'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
         plt.ylabel('Arbitrary units')
+        plt.ylim(-5, 30)
         self.plotCount_ += 1
 
     def results(self):
@@ -169,18 +180,46 @@ class LatencyGenerator:
 
         return self.l_
 
+class NetRes:
+    """
+    Theoritical modeled response.
+    """
+
+    def __init__(self, a, rB, lB, lP):
+        self.a = a
+        self.rB = rB
+        self.lB = lB
+        self.lP = lP
+
+        self.x = 0
+
+    def generate(self, r):
+        self.x = self.x + (r - self.rB)
+        self.x = min(max(0, self.x), self.lB - self.lP)
+
+        # Add random changes
+        #self.a += random.uniform(-0.1, 0.1)
+        #self.rB += random.uniform(-0.1, 0.1)
+        #self.lB += random.uniform(-0.1, 0.1)
+        #self.lP += random.uniform(-0.1, 0.1)
+
+        if r == 0:
+            return self.lB
+        else:
+            return min(max(self.lP, self.a/r + self.x/self.rB + self.lP), self.lB)
+
 
 if __name__ == "__main__":
     tester = Tester()
 
     # Constant latency feedback. Could represent a high performance network that
     # works as fast as possible no matter the rate.
-    tester.test(Constant(5), "Constant Latency")
+    #tester.test(Constant(5), "Constant Latency")
 
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
-    tester.test(Offset(10, 5, 2), "Offset Latency")
-    tester.test(Noise(Offset(10, 5, 2), 0.5), "Offset Latency with Noise")
+    #tester.test(Offset(10, 5, 2), "Offset Latency")
+    #tester.test(Noise(Offset(10, 5, 2), 0.5), "Offset Latency with Noise")
 
     # Model for when consistency is desired.
     #tester.test(VarRatePenalizer(Offset(10, 5, 2), 1),
@@ -191,7 +230,9 @@ if __name__ == "__main__":
     #tester.test(Switch(Offset(10, 5, 2), Constant(10), NUM_DATA_POINTS/2),
     #        "Switch Offset to Constant Latency")
 
-    tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
-            "Fridovich's Original Model")
+    #tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
+    #        "Fridovich's Original Model")
+
+    tester.test(Noise(NetRes(1, 10, 30, 15), 1.0), "Network Model")
 
     tester.results()
