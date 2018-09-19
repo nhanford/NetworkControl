@@ -14,7 +14,6 @@ class Controller:
         self.period = period
         self.numObs = numObs
 
-        self.rB = 0
         self.reset()
 
     def reset(self):
@@ -31,7 +30,7 @@ class Controller:
         self.varRB = 0
 
         self.a = 0
-        self.rB = self.rB/2
+        self.rB = 0
         self.lB = 0
         self.lP = INF
 
@@ -40,14 +39,11 @@ class Controller:
 
         self.timer -= 1
 
-        if self.startProbe > 0 or self.varRB > (self.rateDiff/2)**2:
-            self.startProbe -= 1
-            opt = self.rB + self.rateDiff
-        elif np.mean(self.x) > self.percRTT * self.rtt[0] or self.timer <= 0:
+        if self.timer <= 0:
+            opt = self.rB/2
             self.reset()
-            opt = self.rB + self.rateDiff
         else:
-            opt = self.percMax * self.rB
+            opt = self.rB - 0.5*self.x[0] + 0.1
         opt = min(max(0.1, opt), 30)
 
         xhat = self.x[0] + (r - self.rB)

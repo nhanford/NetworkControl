@@ -20,7 +20,7 @@ def getModuleData(inFile):
         # columns is for when there are no entries.
         df = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
                 columns = ["time", "id", "rtt_meas_us", "rtt_pred_us",
-                    "rate_set", "probing"])
+                    "rate_set", "a", "lp", "rb", "x", "probing"])
 
         return (pdata, df)
 

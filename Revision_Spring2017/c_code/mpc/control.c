@@ -11,126 +11,107 @@ inline s64 sqr(s64 x)
 }
 
 
-static s64 control_predict(struct model *md);
-static void control_update(struct model *md, s64 rtt_meas);
+static void control_update(struct model *md, s64 rate_meas, s64 rtt_meas);
 
 
 size_t control_rollover(struct model *md)
 {
-	return max_t(size_t, md->p, md->q);
+	return md->num_obs;
 }
 
 
-s64 control_process(struct model *md, s64 rtt_meas, s64 rate_meas)
+s64 control_process(struct model *md, s64 time, s64 rate_meas, s64 rtt_meas)
 {
-	s64 b0 = md->b[0];
-	s64 rate_opt;
+	s64 opt;
+	s64 xhat;
 
-	// Convert to internal units.
-	rate_meas >>= 20;
+	if (rate_meas > 0 && rtt_meas > 0)
+		control_update(md, rate_meas, rtt_meas);
 
-	// Now we set predicted RTT to include the control.
-	*lookback_index(&md->lb_pacing_rate, 0) = rate_meas;
-	md->predicted_rtt = control_predict(md);
-	rate_opt = rate_meas;
-
-	// debug.
-	md->dstats.rtt_meas_us = rtt_meas;
-	md->dstats.rtt_pred_us = md->predicted_rtt;
-
-
-	control_update(md, rtt_meas);
-
-	md->avg_rtt = max_t(s64, 1, wma(md->gamma, md->avg_rtt, rtt_meas));
-
-	md->avg_rtt_var = max_t(s64, 1, wma(md->gamma, md->avg_rtt_var,
-				sqr(md->predicted_rtt - md->avg_rtt)));
-
-	md->avg_pacing_rate = wma(md->gamma, md->avg_pacing_rate, rate_meas);
-
-
-	// Predict RTT assuming current control is 0. This is l^(n + 1)|(r = 0).
-	lookback_add(&md->lb_pacing_rate, 0);
-	md->predicted_rtt = control_predict(md);
-
-	if (md->avg_rtt > 0 && md->avg_rtt_var > 0
-			&& md->avg_pacing_rate > 0 && b0 > 0) {
-		// NOTE: Make sure MPC_ONE offsets anything scaled by it. psi, xi,
-		// gamma, alpha, a[*], b[*].
-		s64 t1 = md->xi/md->avg_pacing_rate - b0/md->avg_rtt;
-		s64 t2 = md->avg_rtt_var*sqr(MPC_ONE)/(2*md->psi*b0);
-
-		rate_opt = (t1*t2/MPC_ONE + md->avg_rtt - md->predicted_rtt)
-			* MPC_ONE/b0;
+	if (rtt_meas != 0) {
+		opt = md->rb * (MPC_ONE - lookback_index(&md->x, 0)*MPC_ONE/rtt_meas);
+		opt /= MPC_ONE;
+		opt += md->rate_diff;
+		md->stats.probing = false;
+	} else {
+		opt = md->rb;
+		md->stats.probing = false;
 	}
 
-	// Clamp rate
-	rate_opt = min_t(s64, max_t(s64, rate_opt, MPC_MIN_RATE), MPC_MAX_RATE);
+	opt = min_t(s64, max_t(s64, MPC_MIN_RATE, opt), MPC_MAX_RATE);
 
-	// Convert for external units.
-	rate_opt <<= 20;
+	xhat = lookback_index(&md->x, 0);
+	if (md->rb > 0)
+		xhat += (rate_meas - md->rb)/md->rb;
+	xhat = min_t(s64, max_t(s64, 0, xhat), md->lb - md->lp);
+	md->stats.rtt_pred_us = md->a/opt + md->lp + xhat;
 
-	// debug
-	md->dstats.rate_set = rate_opt;
+	md->stats.rate_set = opt << 20;
+	md->stats.rtt_meas_us = rtt_meas;
+	md->stats.a = md->a;
+	md->stats.lp = md->lp;
+	md->stats.rb = md->rb << 20;
+	md->stats.x = lookback_index(&md->x, 0);
 
-	return rate_opt;
+	return opt;
 }
 
 
-static s64 control_predict(struct model *md)
+static void control_update(struct model *md, s64 rate_meas, s64 rtt_meas)
 {
-	s64 predicted_rtt = 0;
-	size_t i = 0;
-
-	for (i = 0; i < md->p; i++)
-		predicted_rtt += md->a[i] * (*lookback_index(&md->lb_rtt, i)) / MPC_ONE;
-
-	for (i = 0; i < md->q; i++)
-		predicted_rtt += md->b[i] * (*lookback_index(&md->lb_pacing_rate, i)) / MPC_ONE;
-
-	return max_t(s64, 0, min_t(s64, predicted_rtt, 4*md->avg_rtt));
-}
-
-
-static void control_update(struct model *md, s64 rtt_meas)
-{
+	s64 k1 = 0;
+	s64 k2 = 0;
+	s64 k3 = 0;
+	s64 k4 = 0;
+	s64 T = 0;
+	s64 a_new = 0;
+	s64 denom = 0;
 	size_t i;
-	s64 error;
-	s64 total_norm = 0;
 
-	error = rtt_meas - md->predicted_rtt;
+	lookback_add(&md->rate, rate_meas);
+	lookback_add(&md->rtt, rtt_meas);
 
+	for (i = 0; i < md->num_obs; i++) {
+		s64 rate = lookback_index(&md->rate, i);
+		s64 rtt = lookback_index(&md->rate, i);
 
-	for (i = 0; i < md->p; i++) {
-		s64 rtt = *lookback_index(&md->lb_rtt, i);
-		total_norm += rtt*rtt;
+		if (rate != 0) {
+			k1 += MPC_ONE/rate;
+			k2 += MPC_ONE/sqr(rate);
+			k3 += rtt*MPC_ONE/rate;
+			k4 += MPC_ONE*rtt;
+			T += 1;
+		}
 	}
 
-	for (i = 0; i < md->q; i++) {
-		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
-		total_norm += rate*rate;
+	denom = (T*k2*MPC_ONE - sqr(k1));
+
+	if (denom != 0)
+		a_new = (T*k3*MPC_ONE - k1*k4)/denom;
+
+	// TODO: make upper limit less arbitrary.
+	if (a_new > 0 && a_new < 100*MPC_ONE)
+		md->a = a_new;
+
+	lookback_add(&md->x, min_t(s64, max_t(s64, 0,
+		rtt_meas - md->a/rate_meas - md->lp), md->lb));
+
+	// Estimate rB
+	md->lb = 0;
+	md->lp = S64_MAX;
+	md->rb = 0;
+
+	for (i = 1; i < md->num_obs; i++) {
+		s64 rtt = lookback_index(&md->rtt, i);
+
+		md->lb = max_t(s64, md->lb, rtt);
+		md->lp = min_t(s64, md->lp, rtt);
+
+		md->rb = max_t(s64, md->rb, (lookback_index(&md->x, i) + rate_meas)
+			/ (lookback_index(&md->x, i - 1) + 1));
 	}
 
-	total_norm = max_t(s64, 1, total_norm);
-
-
-	if (total_norm == 0)
-		goto exit;
-
-	for (i = 0; i < md->p; i++) {
-		s64 rtt = *lookback_index(&md->lb_rtt, i);
-		s64 delta = rtt * md->alpha * error / total_norm;
-
-		md->a[i] += delta;
-	}
-
-	for (i = 0; i < md->q; i++) {
-		s64 rate = *lookback_index(&md->lb_pacing_rate, i);
-		s64 delta = rate * md->alpha * error / total_norm;
-
-		md->b[i] += delta;
-	}
-
-exit:
-	lookback_add(&md->lb_rtt, rtt_meas);
+	md->avg_rb = wma(md->weight, md->avg_rb, md->rb);
+	md->var_rb = wma(md->weight, md->var_rb, sqr(md->rb - md->avg_rb));
+	md->avg_x = wma(md->weight, md->avg_x, lookback_index(&md->x, 0));
 }

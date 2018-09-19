@@ -4,66 +4,63 @@
 #include "model.h"
 
 
-int model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q)
+int model_init(struct model *md, s64 rate_diff, s64 perc_rtt, s64 perc_max, s64
+	weight, s64 num_obs)
 {
-	size_t i;
+	md->rate_diff = rate_diff;
+	md->perc_rtt = perc_rtt*MPC_ONE/100;
+	md->perc_max = perc_max*MPC_ONE/100;
+	md->weight = weight*MPC_ONE/100;
+	md->num_obs = num_obs;
 
-	md->psi = psi*MPC_ONE/100;
-	md->xi = xi*MPC_ONE/100;
-	md->gamma = gamma*MPC_ONE/100;
+	if (lookback_init(&md->rate, md->num_obs))
+		goto fail_a;
+	if (lookback_init(&md->rtt, md->num_obs))
+		goto fail_b;
+	if (lookback_init(&md->x, md->num_obs))
+		goto fail_c;
 
-	md->avg_rtt = 0;
-	md->avg_rtt_var = 0;
-	md->avg_pacing_rate = 0;
+	mpc_dfs_init(&md->stats);
 
-	md->predicted_rtt = 0;
-
-	md->p = p;
-	md->q = q;
-
-	md->alpha = alpha*MPC_ONE/100;
-
-	md->a = kmalloc(p*sizeof(s64), GFP_KERNEL);
-	if (md->a == NULL)
-		goto exit_failure_a;
-
-	md->b = kmalloc(q*sizeof(s64), GFP_KERNEL);
-	if (md->b == NULL)
-		goto exit_failure_b;
-
-	for (i = 0; i < p; i++)
-		md->a[i] = 0;
-	for (i = 0; i < q; i++)
-		md->b[i] = 0;
-
-	if (lookback_init(&md->lb_rtt, p, 0))
-		goto exit_failure_c;
-
-	if (lookback_init(&md->lb_pacing_rate, q, 0))
-		goto exit_failure_d;
-
-	mpc_dfs_init(&md->dstats);
+	model_reset(md);
 
 	return 0;
-
-exit_failure_d:
-	lookback_release(&md->lb_rtt);
-exit_failure_c:
-	kfree(md->b);
-exit_failure_b:
-	kfree(md->a);
-exit_failure_a:
+fail_c:
+	lookback_release(&md->rtt);
+fail_b:
+	lookback_release(&md->rate);
+fail_a:
 	return 1;
 }
 
 void model_release(struct model *md)
 {
-	kfree(md->a);
-	kfree(md->b);
+	lookback_release(&md->rate);
+	lookback_release(&md->rtt);
+	lookback_release(&md->x);
 
-	lookback_release(&md->lb_rtt);
-	lookback_release(&md->lb_pacing_rate);
+	mpc_dfs_release(&md->stats);
+}
 
-	mpc_dfs_release(&md->dstats);
+void model_reset(struct model *md)
+{
+	size_t i;
+
+	md->probe_time = 0;
+	md->start_probe = 0;
+
+	for (i = 0; i < md->num_obs; i++) {
+		*lookback_index_ref(&md->rate, i) = 0;
+		*lookback_index_ref(&md->rtt, i) = 0;
+		*lookback_index_ref(&md->x, i) = 0;
+	}
+
+	md->avg_rb = 0;
+	md->var_rb = 0;
+	md->avg_x = 0;
+
+	md->a = 0;
+	md->rb = 0;
+	md->lb = 0;
+	md->lp = S64_MAX;
 }

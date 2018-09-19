@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import matplotlib.pyplot as plt
@@ -60,6 +60,10 @@ ax6 = modax[0][0]
 #ax7 = ax6.twinx()
 ax8 = modax[0][1]
 ax9 = ax8.twinx()
+ax10 = modax[1][0]
+ax11 = ax10.twinx()
+ax12 = modax[1][1]
+ax13 = ax12.twinx()
 
 ax1.plot(data.stream.start, rtt_adj, 'r', label = 'RTT')
 ax1.set_xlabel('Time (s)')
@@ -92,6 +96,20 @@ ax8.set_ylabel('MPC Rate (mbit/s)')
 
 ax9.plot(data.module.time, data.module.probing, 'go', label = 'Probing')
 ax9.set_ylabel('Probing')
+
+ax10.plot(data.module.time, data.module.a, 'r--', label = 'a')
+ax10.set_xlabel('Time (s)')
+ax10.set_ylabel('')
+
+ax11.plot(data.module.time, data.module.lp/1000, 'b--', label = 'lp')
+ax11.set_ylabel('lp (ms)')
+
+ax12.plot(data.module.time, data.module.rb/(8 << 20), 'g--', label = 'rb')
+ax12.set_xlabel('Time (s)')
+ax12.set_ylabel('rb (mbits/s)')
+
+ax13.plot(data.module.time, 1000*data.module.x, 'y--', label = 'x')
+ax13.set_ylabel('x (ms)')
 
 
 if args.limit_quantile is not None:

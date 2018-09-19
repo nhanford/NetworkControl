@@ -15,7 +15,7 @@ struct lookback {
 	size_t head;
 };
 
-int lookback_init(struct lookback *lb, size_t size, s64 elem);
+int lookback_init(struct lookback *lb, size_t size);
 void lookback_release(struct lookback *lb);
 
 // Add an observation to the lookback.
@@ -23,12 +23,17 @@ void lookback_add(struct lookback *lb, s64 elem);
 
 // Index an observation, starting with the newest one, and returning a pointer
 // to it. Doesn't do bound checks.
-static inline s64 *lookback_index(struct lookback *lb, size_t idx)
+static inline s64 *lookback_index_ref(struct lookback *lb, size_t idx)
 {
 	if (idx > lb->head)
 		return &lb->elems[lb->size + lb->head - idx];
 	else
 		return &lb->elems[lb->head - idx];
+}
+
+static inline s64 lookback_index(struct lookback *lb, size_t idx)
+{
+	return *lookback_index_ref(lb, idx);
 }
 
 // The number of observations being tracked.

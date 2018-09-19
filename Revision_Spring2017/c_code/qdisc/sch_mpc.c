@@ -96,7 +96,7 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->train_time_to_start = 0;
 	flow->training_left = 0;
 
-	return model_init(&flow->md, 100, 10, 50, 50, 5, 1);
+	return model_init(&flow->md, 100, 25, 90, 25, 1024);
 }
 
 static void flow_release(struct mpc_flow *flow)
@@ -173,21 +173,9 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 	else
 		rtt = 0;
 
-	flow->set_rate = control_process(&flow->md, rtt, flow->meas_rate);
-
-	if (flow->training_left > 0) {
-		flow->md.dstats.probing = true;
-		flow->training_left--;
-		flow->set_rate = 0;
-
-		if (flow->training_left == 0)
-			flow->train_time_to_start = now + INTER_TRAIN_TIME_NS;
-	} else if (flow->train_time_to_start <= now) {
-		flow->training_left = control_rollover(&flow->md) << 10;
-	} else {
-		flow->md.dstats.probing = false;
-	}
-
+	flow->set_rate = control_process(&flow->md, now/NSEC_PER_USEC,
+		flow->meas_rate >> 20, rtt);
+	flow->set_rate <<= 20;
 }
 
 

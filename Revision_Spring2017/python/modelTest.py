@@ -194,7 +194,7 @@ class NetRes:
         self.x = 0
 
     def generate(self, r):
-        self.x = self.x + (r - self.rB)
+        self.x = self.x + (r - self.rB)/self.rB
         self.x = min(max(0, self.x), self.lB - self.lP)
 
         # Add random changes
@@ -206,7 +206,7 @@ class NetRes:
         if r == 0:
             return self.lB
         else:
-            return min(max(self.lP, self.a/r + self.x/self.rB + self.lP), self.lB)
+            return min(max(self.lP, self.a/r + self.x + self.lP), self.lB)
 
 
 if __name__ == "__main__":

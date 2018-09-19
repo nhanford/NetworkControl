@@ -10,8 +10,9 @@ size_t control_rollover(struct model *md);
 
 // Update model and return the next pacing rate.
 //
-// @param rtt_meas RTT measured in us.
+// @param time The current time in use.
 // @param rate_meas The measured rate in bytes/s
-s64 control_process(struct model *md, s64 rtt_meas, s64 rate_meas);
+// @param rtt_meas RTT measured in us.
+s64 control_process(struct model *md, s64 time, s64 rate_meas, s64 rtt_meas);
 
 #endif /* end of include guard: CONTROL_H */

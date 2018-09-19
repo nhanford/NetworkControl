@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import argparse
 import datetime
@@ -47,10 +47,18 @@ class Logger:
                     with open(mpc + "/rtt_meas_us") as rttF, \
                             open(mpc + "/rtt_pred_us") as rttPF, \
                             open(mpc + "/rate_set") as rateF, \
+                            open(mpc + "/a") as aF, \
+                            open(mpc + "/lp") as lpF, \
+                            open(mpc + "/rb") as rbF, \
+                            open(mpc + "/x") as xF, \
                             open(mpc + "/probing") as probingF:
                         rtt = int(rttF.read())
                         rttP = int(rttPF.read())
                         rate = int(rateF.read())
+                        a = int(aF.read())
+                        lp = int(lpF.read())
+                        rb = int(rbF.read())
+                        x = int(xF.read())
 
                         if probingF.read() == "Y\n":
                             probing = True
@@ -59,7 +67,8 @@ class Logger:
 
                         info = {'time': t, 'id': os.path.basename(mpc),
                             'rtt_meas_us': rtt, 'rtt_pred_us': rttP,
-                            'rate_set': rate, 'probing': probing}
+                            'rate_set': rate, 'a': a, 'lp': lp, 'rb': rb,
+                            'x': x, 'probing': probing}
 
                         data.append(info)
 
@@ -67,7 +76,8 @@ class Logger:
                             print("RTT (ms): {}, Set Rate (B/s): {}".format(
                                 info['rtt_meas_us']/1000.0, info['rate_set']))
 
-                except FileNotFoundError:
+                except FileNotFoundError as err:
+                    print(err)
                     pass
 
             s = self.interval - (now() - t)

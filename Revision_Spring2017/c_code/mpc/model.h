@@ -7,43 +7,41 @@
 #define MODEL_H
 
 struct model {
-	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s32 psi;
-	s32 xi;
-	s32 gamma;
+	// Rates are in MB/s, and RTTs are in us. a and percentages are out of
+	// MPC_ONE.
 
-	// us
-	s64 avg_rtt;
-	s64 avg_rtt_var;
+	s64 rate_diff;
+	s64 perc_rtt;
+	s64 perc_max;
+	s64 weight;
+	s64 period;
+	s64 num_obs;
 
-	// MB/s
-	s64 avg_pacing_rate;
+	s64 probe_time;
+	u64 start_probe;
 
-	// us
-	s64 predicted_rtt;
+	struct lookback rate;
+	struct lookback rtt;
+	struct lookback x;
 
-	size_t p;
-	size_t q;
+	s64 avg_rb;
+	s64 var_rb;
+	s64 avg_x;
 
-	// These are all out of MPC_DIV. So, 0.5 = MPC_DIV/2
-	s32 alpha;
-	s64 *a;
-	s64 *b;
+	s64 a;
+	s64 rb;
+	s64 lb;
+	s64 lp;
 
-	// us
-	struct lookback lb_rtt;
-
-	// MB/s
-	struct lookback lb_pacing_rate;
-
-	// For debugging.
-	struct mpc_dfs_stats dstats;
+	struct mpc_dfs_stats stats;
 };
 
-// psi, xi, gamma, and alpha are percentages.
-int model_init(struct model *md, s32 psi, s32 xi, s32 gamma, s32 alpha,
-		size_t p, size_t q);
+// perc_rtt, perc_max, and weight are percentages.
+int model_init(struct model *md, s64 rate_diff, s64 perc_rtt, s64 perc_max, s64
+	weight, s64 num_obs);
 
 void model_release(struct model *md);
+
+void model_reset(struct model *md);
 
 #endif /* end of include guard: MODEL_H */
