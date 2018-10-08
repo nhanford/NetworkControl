@@ -11,14 +11,12 @@ struct mpc_dfs_stats {
 
 	s64 rtt_meas_us;
 	s64 rtt_pred_us;
+	s64 rate_meas;
 	s64 rate_set;
 
-	s64 a;
 	s64 lp;
 	s64 rb;
 	s64 x;
-
-	bool probing;
 };
 
 

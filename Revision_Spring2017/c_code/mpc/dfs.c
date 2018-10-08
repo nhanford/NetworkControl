@@ -34,12 +34,11 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 	dstats->dir = NULL;
 	dstats->rtt_meas_us = 0;
 	dstats->rtt_pred_us = 0;
+	dstats->rate_meas = 0;
 	dstats->rate_set = 0;
-	dstats->a = 0;
 	dstats->lp = 0;
 	dstats->rb = 0;
 	dstats->x = 0;
-	dstats->probing = false;
 
 	sprintf(uniq_name, "%lld", dfs_id);
 
@@ -61,20 +60,17 @@ void mpc_dfs_init(struct mpc_dfs_stats *dstats)
 				&dstats->rtt_meas_us, &fops_s64);
 		debugfs_create_file("rtt_pred_us", 0444, dstats->dir,
 				&dstats->rtt_pred_us, &fops_s64);
+		debugfs_create_file("rate_meas", 0444, dstats->dir,
+				&dstats->rate_meas, &fops_s64);
 		debugfs_create_file("rate_set", 0444, dstats->dir,
 				&dstats->rate_set, &fops_s64);
 
-		debugfs_create_file("a", 0444, dstats->dir,
-				&dstats->a, &fops_s64);
 		debugfs_create_file("lp", 0444, dstats->dir,
 				&dstats->lp, &fops_s64);
 		debugfs_create_file("rb", 0444, dstats->dir,
 				&dstats->rb, &fops_s64);
 		debugfs_create_file("x", 0444, dstats->dir,
 				&dstats->x, &fops_s64);
-
-		debugfs_create_bool("probing", 0444, dstats->dir,
-				&dstats->probing);
 
 		dfs_id = (dfs_id + 1) % ULLONG_MAX;
 	}

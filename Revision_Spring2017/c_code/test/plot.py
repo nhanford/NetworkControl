@@ -45,7 +45,8 @@ cwnd_adj = data.stream.snd_cwnd/(1<<10)
 
 mpcRTT_adj = data.module.rtt_meas_us/1000
 mpcRTTPred_adj = data.module.rtt_pred_us/1000
-mpcRate_adj = 8*data.module.rate_set/(1 << 20)
+mpcRateM_adj = 8*data.module.rate_meas/(1 << 20)
+mpcRateS_adj = 8*data.module.rate_set/(1 << 20)
 
 
 bwfig, bwax = plt.subplots(2, 2, figsize=(10, 10))
@@ -90,16 +91,12 @@ ax6.plot(data.module.time, mpcRTTPred_adj, 'y', label = 'MPC Predicted RTT')
 ax6.set_xlabel('Time (s)')
 ax6.set_ylabel('MPC RTT (ms)')
 
-ax8.plot(data.module.time, mpcRate_adj, 'bo', label = 'MPC Set Rate')
+ax8.plot(data.module.time, mpcRateS_adj, 'bo', label = 'MPC Set Rate')
 ax8.set_xlabel('Time (s)')
-ax8.set_ylabel('MPC Rate (mbit/s)')
+ax8.set_ylabel('MPC Set Rate (mbit/s)')
 
-ax9.plot(data.module.time, data.module.probing, 'go', label = 'Probing')
-ax9.set_ylabel('Probing')
-
-ax10.plot(data.module.time, data.module.a, 'r--', label = 'a')
-ax10.set_xlabel('Time (s)')
-ax10.set_ylabel('')
+ax9.plot(data.module.time, mpcRateM_adj, 'ro', label = 'MPC Observed Rate')
+ax9.set_ylabel('MPC Measured Rate (mbit/s)')
 
 ax11.plot(data.module.time, data.module.lp/1000, 'b--', label = 'lp')
 ax11.set_ylabel('lp (ms)')
@@ -124,10 +121,9 @@ if args.limit_quantile is not None:
         q2 = mpcRTTPred_adj.quantile(args.limit_quantile)
         ax6.set_ylim(0, min(q1, q2)*2)
 
-    if len(mpcRate_adj) > 0:
-        ax8.set_ylim(0, mpcRate_adj.quantile(args.limit_quantile)*2)
-
-    ax9.set_ylim(-1, 2)
+    if len(mpcRateS_adj) > 0:
+        ax8.set_ylim(0, mpcRateS_adj.quantile(args.limit_quantile)*2)
+        ax9.set_ylim(0, mpcRateS_adj.quantile(args.limit_quantile)*2)
 
 bwfig.legend()
 bwfig.suptitle("BWCTL")

@@ -46,29 +46,23 @@ class Logger:
                 try:
                     with open(mpc + "/rtt_meas_us") as rttF, \
                             open(mpc + "/rtt_pred_us") as rttPF, \
-                            open(mpc + "/rate_set") as rateF, \
-                            open(mpc + "/a") as aF, \
+                            open(mpc + "/rate_meas") as rateMF, \
+                            open(mpc + "/rate_set") as rateSF, \
                             open(mpc + "/lp") as lpF, \
                             open(mpc + "/rb") as rbF, \
-                            open(mpc + "/x") as xF, \
-                            open(mpc + "/probing") as probingF:
+                            open(mpc + "/x") as xF:
                         rtt = int(rttF.read())
                         rttP = int(rttPF.read())
-                        rate = int(rateF.read())
-                        a = int(aF.read())
+                        rateS = int(rateSF.read())
+                        rateM = int(rateMF.read())
                         lp = int(lpF.read())
                         rb = int(rbF.read())
                         x = int(xF.read())
 
-                        if probingF.read() == "Y\n":
-                            probing = True
-                        else:
-                            probing = False
-
                         info = {'time': t, 'id': os.path.basename(mpc),
                             'rtt_meas_us': rtt, 'rtt_pred_us': rttP,
-                            'rate_set': rate, 'a': a, 'lp': lp, 'rb': rb,
-                            'x': x, 'probing': probing}
+                            'rate_meas': rateM, 'rate_set': rateS,
+                            'lp': lp, 'rb': rb, 'x': x}
 
                         data.append(info)
 

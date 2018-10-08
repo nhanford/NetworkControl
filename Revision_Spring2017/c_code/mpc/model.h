@@ -7,28 +7,27 @@
 #define MODEL_H
 
 struct model {
-	// Rates are in MB/s, and RTTs are in us. a and percentages are out of
+	// Rates are in MB/s, and RTTs are in us. Percentages are out of
 	// MPC_ONE.
 
 	s64 rate_diff;
-	s64 perc_rtt;
-	s64 perc_max;
 	s64 weight;
 	s64 period;
-	s64 num_obs;
+	s64 rate_set;
 
-	s64 probe_time;
-	u64 start_probe;
+	s64 alpha;
+	s64 c1;
+	s64 c2;
+	s64 c3;
 
-	struct lookback rate;
-	struct lookback rtt;
-	struct lookback x;
+	s64 timer;
 
-	s64 avg_rb;
-	s64 var_rb;
-	s64 avg_x;
+	s64 avg_rate;
+	s64 avg_rtt;
 
-	s64 a;
+	s64 x0;
+	s64 x1;
+
 	s64 rb;
 	s64 lb;
 	s64 lp;
@@ -36,9 +35,9 @@ struct model {
 	struct mpc_dfs_stats stats;
 };
 
-// perc_rtt, perc_max, and weight are percentages.
-int model_init(struct model *md, s64 rate_diff, s64 perc_rtt, s64 perc_max, s64
-	weight, s64 num_obs);
+// alpha and weight are percentages.
+int model_init(struct model *md, s64 rate_diff, s64 period, s64 weight,
+	s64 alpha, s64 c1, s64 c2, s64 c3);
 
 void model_release(struct model *md);
 
