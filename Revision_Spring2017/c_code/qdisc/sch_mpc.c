@@ -97,7 +97,7 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->training_left = 0;
 
 	// TODO: Period value needs to be adjusted.
-	return model_init(&flow->md, 100, 10000, 10, 10, 10, 1, 100);
+	return model_init(&flow->md, 100, 10000, 10, 10, 1, 100, 1000);
 }
 
 static void flow_release(struct mpc_flow *flow)

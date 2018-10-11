@@ -10,6 +10,22 @@ inline s64 sqr(s64 x)
 	return x*x;
 }
 
+s64 rdiv(s64 x, s64 y)
+{
+	s64 div = x/y;
+	s64 rem = x%y;
+
+	if (abs(rem) > 0) {
+		if (x*y < 0)
+			div -= 1;
+		else
+			div += 1;
+	}
+
+
+	return div;
+}
+
 
 static void control_update(struct model *md, s64 rate_meas, s64 rtt_meas);
 
@@ -45,7 +61,7 @@ s64 control_process(struct model *md, s64 time, s64 rate_meas, s64 rtt_meas)
 	} else {
 		t1 = c1_adj*md->rb * (1 - md->alpha*md->x0/MPC_ONE);
 		t2 = sqr(md->rb) * (md->c2*md->rate_set + md->c3/2);
-		t3 = (md->c2*sqr(md->rb) + md->c1);
+		t3 = (md->c2*sqr(md->rb) + c1_adj);
 
 		if (t3 != 0) {
 			md->rate_set = (t1 + t2)/t3;
@@ -91,8 +107,8 @@ static void control_update(struct model *md, s64 rate_meas, s64 rtt_meas)
 	md->x1 = md->x0;
 	md->x0 = max_t(s64, 0, rtt_meas - md->lp);
 
-	t1 = (rate_meas - md->rb)/sqr(rate_meas);
-	t2 = (md->x0 - rtt_meas + md->lp)/rate_meas;
+	t1 = rdiv(rate_meas - md->rb, sqr(rate_meas));
+	t2 = rdiv(md->x0 - rtt_meas + md->lp, rate_meas);
 	md->rb += 2*(t1 + t2);
 	md->rb = max_t(s64, MPC_MIN_RATE, md->rb);
 
