@@ -43,16 +43,16 @@ struct mpc_flow {
 	// measured, respectively.
 	u64 set_rate;
 	u64 meas_rate;
+	u64 last_bytes_sent;
+	u64 bytes_sent;
 	u64 time_last_sent;
+	u64 time_start;
 
 	// The time at which the next packet should be sent.
 	u64 time_to_send;
 
 	// Last smoothed rtt seen by the model.
 	u32 last_srtt;
-
-	u64 train_time_to_start;
-	u64 training_left;
 
 	struct model md;
 };
@@ -87,14 +87,14 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 
 	flow->set_rate = 0;
 	flow->meas_rate = 0;
+	flow->last_bytes_sent = 0;
+	flow->bytes_sent = 0;
 	flow->time_last_sent = 0;
+	flow->time_start = ktime_get_ns();
 
 	flow->time_to_send = 0;
 
 	flow->last_srtt = 0;
-
-	flow->train_time_to_start = 0;
-	flow->training_left = 0;
 
 	// TODO: Period value needs to be adjusted.
 	return model_init(&flow->md, 100, 10000, 10, 10, 1, 100, 1000);
@@ -146,14 +146,17 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 now)
 {
 	u64 min_delay;
 
-	if (flow->set_rate == 0)
+	if (flow->set_rate > 0) {
+		min_delay = (flow->bytes_sent + flow->last_bytes_sent) / flow->set_rate;
+		min_delay *= NSEC_PER_SEC;
+		min_delay -= now - flow->time_start;
+	} else {
 		min_delay = 0;
-	else
-		min_delay = NSEC_PER_SEC * flow->head->len / flow->set_rate;
+	}
 
 	// Take the max here to ensure that we don't go past the max rate on a
 	// burst.
-	flow->time_to_send = max_t(u64, now, flow->time_to_send + min_delay);
+	flow->time_to_send = max_t(u64, now, flow->time_last_sent + min_delay);
 }
 
 static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
@@ -319,6 +322,8 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	flow->meas_rate = flow->meas_rate*7/8 +
 		skb->len*NSEC_PER_SEC/(now - flow->time_last_sent)/8;
 
+	flow->bytes_sent += flow->last_bytes_sent;
+	flow->last_bytes_sent = skb->len;
 	flow->time_last_sent = now;
 
 	if (flow->qlen > 0) {
