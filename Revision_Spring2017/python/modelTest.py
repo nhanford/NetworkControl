@@ -17,12 +17,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-RATED = 1.0
-PRTT = 0.1
-PM = 0.90
+LR = 5.0
+ALPHA = 0.1
+C1 = 1.0
+C2 = 10.0
 W = 1.0/4.0
 PERIOD = 1000
-OBS = 32
 
 NUM_DATA_POINTS = 2000
 
@@ -38,14 +38,13 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(RATED, PRTT, PM, W, PERIOD, OBS)
+        rateler = Controller(LR, ALPHA, C1, C2, W, PERIOD)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
         predicted_latency = np.zeros(NUM_DATA_POINTS)
         recorded_rate = np.zeros(NUM_DATA_POINTS)
         x = np.zeros(NUM_DATA_POINTS)
-        a = np.zeros(NUM_DATA_POINTS)
         rB = np.zeros(NUM_DATA_POINTS)
         lP = np.zeros(NUM_DATA_POINTS)
         last_rate = 0.0
@@ -56,8 +55,7 @@ class Tester:
             (last_rate, predicted_latency[i]) = rateler.process(last_rate, recorded_latency[i])
             recorded_rate[i] = last_rate
 
-            x[i] = rateler.x[0]
-            a[i] = rateler.a
+            x[i] = rateler.x
             rB[i] = rateler.rB
             lP[i] = rateler.lP
 
@@ -65,11 +63,10 @@ class Tester:
         plt.plot(recorded_index, recorded_latency, 'r--',
                  recorded_index, predicted_latency, 'g^',
                  recorded_index, recorded_rate, 'yo',
-                 recorded_index, x, 'y-',
-                 recorded_index, a, 'r-',
+                 #recorded_index, x, 'y-',
                  recorded_index, rB, 'g-',
                  recorded_index, lP, 'b-')
-        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'x', 'a', 'rB', 'lP'])
+        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'rB', 'lP'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
         plt.ylabel('Arbitrary units')
