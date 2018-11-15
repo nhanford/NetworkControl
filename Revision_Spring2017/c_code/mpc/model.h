@@ -1,43 +1,46 @@
 
 #include "dfs.h"
-#include "lookback.h"
+#include "scaled.h"
 #include "util.h"
 
 #ifndef MODEL_H
 #define MODEL_H
 
 struct model {
-	// Rates are in MB/s, and RTTs are in us. Percentages are out of
+	// Rates are in B/s, and RTTs are in us. Percentages are out of
 	// MPC_ONE.
 
-	s64 rate_diff;
-	s64 weight;
-	s64 period;
-	s64 rate_set;
+	scaled rate_diff;
+	scaled weight;
+	u64 period;
+	scaled rate_set;
 
-	s64 alpha;
-	s64 c1;
-	s64 c2;
-	s64 c3;
+	scaled alpha;
+	// RTT weight
+	scaled c1;
+	// Rate change weight
+	scaled c2;
+	// Rate weight
+	scaled c3;
 
-	s64 timer;
+	u64 timer;
 
-	s64 avg_rate;
-	s64 avg_rtt;
+	scaled avg_rate;
+	scaled avg_rtt;
 
-	s64 x0;
-	s64 x1;
+	scaled x0;
+	scaled x1;
 
-	s64 rb;
-	s64 lb;
-	s64 lp;
+	scaled rb;
+	scaled lb;
+	scaled lp;
 
 	struct mpc_dfs_stats stats;
 };
 
 // alpha and weight are percentages.
-int model_init(struct model *md, s64 rate_diff, s64 period, s64 weight,
-	s64 alpha, s64 c1, s64 c2, s64 c3);
+int model_init(struct model *md, scaled rate_diff, u64 period, scaled weight,
+	scaled alpha, scaled c1, scaled c2, scaled c3);
 
 void model_release(struct model *md);
 

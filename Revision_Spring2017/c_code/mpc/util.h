@@ -1,6 +1,8 @@
 
 #include <linux/printk.h>
 
+#include "scaled_shorthand.h"
+
 #ifndef MPC_UTIL_H
 #define MPC_UTIL_H
 
@@ -9,14 +11,13 @@
 #endif
 
 // Bytes/s
-#define MPC_MIN_RATE (100UL)
-#define MPC_MAX_RATE (100UL << 10)
+#define MPC_MIN_RATE scaled_from_int(100, 20)
+#define MPC_MAX_RATE scaled_from_int(100, 30)
 
-#define MPC_ONE (1UL << 16)
-
-static inline s64 wma(s64 weight, s64 avg, s64 x)
+static inline scaled wma(scaled weight, scaled avg,
+	scaled x)
 {
-	return (MPC_ONE - weight)*avg/MPC_ONE + weight*x/MPC_ONE;
+	return SA(SM(SS(ONE, weight), avg), SM(weight, x));
 }
 
 #endif /* end of include guard: MPC_UTIL_H */

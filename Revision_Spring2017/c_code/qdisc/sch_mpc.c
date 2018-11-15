@@ -97,7 +97,14 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->last_srtt = 0;
 
 	// TODO: Period value needs to be adjusted.
-	return model_init(&flow->md, 100, 10000, 10, 10, 1, 100, 1000);
+	return model_init(&flow->md,
+		scaled_from_int(100, 20),
+		10000,
+		scaled_from_int(1, -3),
+		scaled_from_int(1, -3),
+		scaled_from_int(1, 0),
+		scaled_from_int(1, 0),
+		scaled_from_int(100, 20));
 }
 
 static void flow_release(struct mpc_flow *flow)
@@ -177,9 +184,10 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 	else
 		rtt = 0;
 
-	flow->set_rate = control_process(&flow->md, now/NSEC_PER_USEC,
-		flow->meas_rate >> 20, rtt);
-	flow->set_rate <<= 20;
+	flow->set_rate = scaled_to_int(control_process(&flow->md,
+		scaled_from_int(now/NSEC_PER_USEC, 0),
+		scaled_from_int(flow->meas_rate, 0),
+		scaled_from_int(rtt, 0)));
 }
 
 
@@ -320,7 +328,7 @@ static struct sk_buff *mpc_dequeue(struct Qdisc *sch)
 	mpc_del_flow(sch, flow);
 
 	flow->meas_rate = flow->meas_rate*7/8 +
-		skb->len*NSEC_PER_SEC/(now - flow->time_last_sent)/8;
+		flow->last_bytes_sent*NSEC_PER_SEC/(now - flow->time_last_sent)/8;
 
 	flow->bytes_sent += flow->last_bytes_sent;
 	flow->last_bytes_sent = skb->len;
