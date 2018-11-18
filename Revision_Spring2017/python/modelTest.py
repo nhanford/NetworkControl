@@ -17,7 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import random
 
-LR = 5.0
+LR = 1.0
 ALPHA = 0.1
 C1 = 1.0
 C2 = 10.0
@@ -211,11 +211,11 @@ if __name__ == "__main__":
 
     # Constant latency feedback. Could represent a high performance network that
     # works as fast as possible no matter the rate.
-    #tester.test(Constant(5), "Constant Latency")
+    tester.test(Constant(5), "Constant Latency")
 
     # Here we model a network whose latency is best at a certain rate, with no
     # other considerations.
-    #tester.test(Offset(10, 5, 2), "Offset Latency")
+    tester.test(Offset(10, 5, 2), "Offset Latency")
     #tester.test(Noise(Offset(10, 5, 2), 0.5), "Offset Latency with Noise")
 
     # Model for when consistency is desired.
@@ -230,6 +230,6 @@ if __name__ == "__main__":
     #tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
     #        "Fridovich's Original Model")
 
-    tester.test(Noise(NetRes(1, 10, 30, 15), 1.0), "Network Model")
+    tester.test(Noise(NetRes(1, 10, 30, 15), 0.0), "Network Model")
 
     tester.results()

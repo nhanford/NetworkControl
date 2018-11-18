@@ -31,7 +31,7 @@ scaled scaled_add(scaled x, scaled y);
 scaled scaled_sub(scaled x, scaled y);
 scaled scaled_mul(scaled x, scaled y);
 scaled scaled_div(scaled x, scaled y);
-scaled scaled_sqr(scaled x);
+scaled scaled_ipow(scaled x, scaled_int n);
 
 bool scaled_lt(scaled x, scaled y);
 bool scaled_eq(scaled x, scaled y);

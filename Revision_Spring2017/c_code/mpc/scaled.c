@@ -112,9 +112,22 @@ scaled scaled_div(scaled x, scaled y)
 }
 
 
-scaled scaled_sqr(scaled x)
+scaled scaled_ipow(scaled x, scaled_int n)
 {
-	return scaled_mul(x, x);
+	scaled res = ONE;
+	scaled_int cnt = n;
+	scaled_int i;
+
+	if (n < 0)
+		cnt = -cnt;
+
+	for (i = 0; i < n; i++)
+		res = scaled_mul(res, x);
+
+	if (n < 0)
+		res = scaled_div(ONE, res);
+
+	return res;
 }
 
 

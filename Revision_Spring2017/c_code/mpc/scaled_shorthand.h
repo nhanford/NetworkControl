@@ -11,7 +11,7 @@
 #define SS scaled_sub
 #define SM scaled_mul
 #define SD scaled_div
-#define SSQR scaled_sqr
+#define SIP scaled_ipow
 
 #define SLT scaled_lt
 #define SEQ scaled_eq

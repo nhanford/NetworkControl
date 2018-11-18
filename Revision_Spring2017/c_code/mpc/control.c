@@ -29,19 +29,19 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 
 	//md->timer--;
 	if (md->timer <= 0) {
-		scaled rb_save = md->rb;
+		scaled rb_save = SM(SFI(7, -3), md->rb);
 		model_reset(md);
 		md->rb = rb_save;
 		md->rate_set = rb_save;
 	} else {
-		t1 = SM(SSQR(md->rb), SA(SM(md->c2, md->rate_set), md->c3));
-		t2 = SM(SM(md->c1, md->rb), SS(ONE, SM(md->alpha, md->x0)));
-		t3 = SA(SM(md->c2, SSQR(md->rb)), md->c1);
+		t1 = SM(md->c1, SM(md->rb, SA(ONE, SS(SM(md->alpha, md->lp), md->x0))));
+		t2 = SM(md->c2, md->rb);
+		t3 = SA(md->c1, md->c2);
 
 		if (!SEQ(t3, ZERO)) {
 			md->rate_set = SD(SA(t1, t2), t3);
 		} else {
-			// Both c1 and rb must be 0 here. This means we are only
+			// Both c1 and c2 must be 0 here. This means we are only
 			// concerned about increasing the rate.
 			md->rate_set = SA(md->rb, md->rate_diff);
 		}
@@ -77,9 +77,12 @@ static void control_update(struct model *md, scaled rate_meas, scaled rtt_meas)
 	md->x1 = md->x0;
 	md->x0 = scaled_max(ZERO, SS(rtt_meas, md->lp));
 
-	t1 = SD(SS(rate_meas, md->rb), SSQR(rate_meas));
-	t2 = SD(SA(SS(md->x0, rtt_meas), md->lp), rate_meas);
-	md->rb = SA(md->rb, SA(t1, t2));
+	if (!SEQ(md->rb, ZERO)) {
+		t1 = SA(SM(md->rb, SS(SS(md->x1, md->x0), ONE)), rate_meas);
+		t2 = SD(SM(rate_meas, t1), SIP(md->rb, 3));
+		md->rb = SA(md->rb, t2);
+	}
+
 	md->rb = scaled_max(MPC_MIN_RATE, md->rb);
 
 	md->avg_rate = wma(md->weight, md->avg_rate, rate_meas);

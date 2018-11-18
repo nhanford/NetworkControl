@@ -7,21 +7,19 @@
 #define MODEL_H
 
 struct model {
-	// Rates are in B/s, and RTTs are in us. Percentages are out of
-	// MPC_ONE.
+	// Rates are in B/s, and RTTs are in us.
 
 	scaled rate_diff;
 	scaled weight;
 	u64 period;
 	scaled rate_set;
 
+	// Percent above RTT.
 	scaled alpha;
 	// RTT weight
 	scaled c1;
-	// Rate change weight
+	// RTT variance weight
 	scaled c2;
-	// Rate weight
-	scaled c3;
 
 	u64 timer;
 
@@ -40,7 +38,7 @@ struct model {
 
 // alpha and weight are percentages.
 int model_init(struct model *md, scaled rate_diff, u64 period, scaled weight,
-	scaled alpha, scaled c1, scaled c2, scaled c3);
+	scaled alpha, scaled c1, scaled c2);
 
 void model_release(struct model *md);
 
