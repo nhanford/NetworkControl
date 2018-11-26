@@ -21,8 +21,9 @@ LR = 1.0
 ALPHA = 0.1
 C1 = 1.0
 C2 = 10.0
-W = 1.0/4.0
-PERIOD = 1000
+W = 0.01
+IPERIOD = 100
+DPERIOD = 10
 
 NUM_DATA_POINTS = 2000
 
@@ -38,7 +39,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(LR, ALPHA, C1, C2, W, PERIOD)
+        rateler = Controller(LR, ALPHA, C1, C2, W, IPERIOD, DPERIOD)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
@@ -63,14 +64,14 @@ class Tester:
         plt.plot(recorded_index, recorded_latency, 'r--',
                  recorded_index, predicted_latency, 'g^',
                  recorded_index, recorded_rate, 'yo',
-                 #recorded_index, x, 'y-',
+                 recorded_index, x, 'c-',
                  recorded_index, rB, 'g-',
                  recorded_index, lP, 'b-')
-        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'rB', 'lP'])
+        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'x', 'rB', 'lP'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
         plt.ylabel('Arbitrary units')
-        plt.ylim(-5, 30)
+        plt.ylim(-5, 35)
         self.plotCount_ += 1
 
     def results(self):
@@ -122,15 +123,21 @@ class Switch:
 
 class Noise:
     """
-    Adds some noise to latency.
+    Adds some noise to latency. May also occasionally return random RTTs.
     """
 
-    def __init__(self, response, noise):
-        self.response_ = response
-        self.noise_ = noise
+    def __init__(self, response, noise, percBad):
+        self.response = response
+        self.noise = noise
+        self.percBad = percBad
 
     def generate(self, rate):
-        return self.response_.generate(rate) + random.uniform(0, self.noise_)
+        if np.random.uniform() > 1.0 - self.percBad/2:
+            return 0
+        elif np.random.uniform() > 1.0 - self.percBad/2:
+            return 10000
+
+        return self.response.generate(rate) + random.uniform(0, self.noise)
 
 class VarRatePenalizer:
     """
@@ -194,16 +201,10 @@ class NetRes:
         self.x = self.x + (r - self.rB)/self.rB
         self.x = min(max(0, self.x), self.lB - self.lP)
 
-        # Add random changes
-        #self.a += random.uniform(-0.1, 0.1)
-        #self.rB += random.uniform(-0.1, 0.1)
-        #self.lB += random.uniform(-0.1, 0.1)
-        #self.lP += random.uniform(-0.1, 0.1)
-
         if r == 0:
             return self.lB
         else:
-            return min(max(self.lP, self.a/r + self.x + self.lP), self.lB)
+            return self.a/r + self.x + self.lP
 
 
 if __name__ == "__main__":
@@ -230,6 +231,6 @@ if __name__ == "__main__":
     #tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
     #        "Fridovich's Original Model")
 
-    tester.test(Noise(NetRes(1, 10, 30, 15), 0.0), "Network Model")
+    tester.test(Noise(NetRes(0.1*0.1, 10, 30, 15), 1.0, 0.0e-3), "Network Model")
 
     tester.results()

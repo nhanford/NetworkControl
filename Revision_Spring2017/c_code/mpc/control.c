@@ -27,12 +27,19 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 		// rate_set can thus give a better prediction.
 		control_update(md, md->rate_set, rtt_meas);
 
-	//md->timer--;
+	md->timer--;
 	if (md->timer <= 0) {
-		scaled rb_save = SM(SFI(7, -3), md->rb);
-		model_reset(md);
-		md->rb = rb_save;
-		md->rate_set = rb_save;
+		md->rate_set = md->rb;
+
+		if (!SLT(md->alpha, ZERO)) {
+			md->alpha = scaled_negate(ONE);
+			md->lp = scaled_from_int(S64_MAX, 0);
+			md->timer = md->dec_period;
+		} else {
+			md->alpha = md->alpha_init;
+			md->lb = ZERO;
+			md->timer = md->inc_period;
+		}
 	} else {
 		t1 = SM(md->c1, SM(md->rb, SA(ONE, SS(SM(md->alpha, md->lp), md->x0))));
 		t2 = SM(md->c2, md->rb);

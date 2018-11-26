@@ -105,7 +105,7 @@ ax12.plot(data.module.time, data.module.rb/(8 << 20), 'g--', label = 'rb')
 ax12.set_xlabel('Time (s)')
 ax12.set_ylabel('rb (mbits/s)')
 
-ax13.plot(data.module.time, 1000*data.module.x, 'y--', label = 'x')
+ax13.plot(data.module.time, data.module.x/1000, 'y--', label = 'x')
 ax13.set_ylabel('x (ms)')
 
 

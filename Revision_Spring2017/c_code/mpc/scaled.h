@@ -25,7 +25,7 @@ typedef struct {
 scaled scaled_from_int(scaled_int base, scaled_int exp);
 scaled_int scaled_to_int(scaled x);
 
-scaled negate(scaled x);
+scaled scaled_negate(scaled x);
 
 scaled scaled_add(scaled x, scaled y);
 scaled scaled_sub(scaled x, scaled y);

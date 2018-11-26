@@ -8,13 +8,14 @@
 
 struct model {
 	// Rates are in B/s, and RTTs are in us.
-
 	scaled rate_diff;
 	scaled weight;
-	u64 period;
+	u64 inc_period;
+	u64 dec_period;
 	scaled rate_set;
 
-	// Percent above RTT.
+	// Percent above RTT. Initial and current values.
+	scaled alpha_init;
 	scaled alpha;
 	// RTT weight
 	scaled c1;
@@ -37,8 +38,8 @@ struct model {
 };
 
 // alpha and weight are percentages.
-int model_init(struct model *md, scaled rate_diff, u64 period, scaled weight,
-	scaled alpha, scaled c1, scaled c2);
+int model_init(struct model *md, scaled rate_diff, u64 inc_period,
+	u64 dec_period, scaled weight, scaled alpha, scaled c1, scaled c2);
 
 void model_release(struct model *md);
 
