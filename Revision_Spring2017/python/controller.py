@@ -5,11 +5,10 @@ import numpy as np
 INF = 1000
 
 class Controller:
-    def __init__(self, lr, alpha, c1, c2, weight, incPeriod, decPeriod):
+    def __init__(self, lr, alpha, c, weight, incPeriod, decPeriod):
         self.lr = lr
         self.alphaInit = alpha
-        self.c1 = c1
-        self.c2 = c2
+        self.c = c
         self.weight = weight
         self.incPeriod = incPeriod
         self.decPeriod = decPeriod
@@ -37,26 +36,21 @@ class Controller:
 
         self.timer -= 1
 
-        if self.timer <= 0:
+        if self.decPeriod > 0 and self.timer <= 0:
             opt = self.rB
 
             if self.alpha >= 0:
                 self.alpha = -1#self.alphaInit
-                self.lP = INF
+                self.lP = l
                 self.timer = self.decPeriod
             else:
                 self.alpha = self.alphaInit
-                self.lB = 0
+                self.lB = l
                 self.timer = self.incPeriod
         else:
-            t1 = self.c1*self.rB*(1 + self.alpha*self.lP - self.x)
-            t2 = self.c2*self.rB
-            t3 = self.c1 + self.c2
+            lt = (1 + self.alpha) * self.lP
+            opt = self.rB * (1 + (1 - self.c) * (lt - l))
 
-            if t3 != 0:
-                opt =(t1 + t2)/t3
-            else:
-                opt = self.r
         opt = min(max(0.1, opt), 30)
         self.r = opt
 

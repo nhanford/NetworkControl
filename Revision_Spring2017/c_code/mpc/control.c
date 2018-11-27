@@ -17,10 +17,8 @@ size_t control_rollover(struct model *md)
 scaled control_process(struct model *md, scaled time, scaled rate_meas,
 	scaled rtt_meas)
 {
+	scaled target_rtt;
 	scaled xhat;
-	scaled t1;
-	scaled t2;
-	scaled t3;
 
 	if (SLT(ZERO, md->rate_set) && SLT(ZERO, rtt_meas))
 		// NOTE: We use rate_set because rate_mead is not accurate, and
@@ -33,25 +31,17 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 
 		if (!SLT(md->alpha, ZERO)) {
 			md->alpha = scaled_negate(ONE);
-			md->lp = scaled_from_int(S64_MAX, 0);
+			md->lp = rtt_meas;
 			md->timer = md->dec_period;
 		} else {
 			md->alpha = md->alpha_init;
-			md->lb = ZERO;
+			md->lb = rtt_meas;
 			md->timer = md->inc_period;
 		}
 	} else {
-		t1 = SM(md->c1, SM(md->rb, SA(ONE, SS(SM(md->alpha, md->lp), md->x0))));
-		t2 = SM(md->c2, md->rb);
-		t3 = SA(md->c1, md->c2);
-
-		if (!SEQ(t3, ZERO)) {
-			md->rate_set = SD(SA(t1, t2), t3);
-		} else {
-			// Both c1 and c2 must be 0 here. This means we are only
-			// concerned about increasing the rate.
-			md->rate_set = SA(md->rb, md->rate_diff);
-		}
+		target_rtt = SM(SA(ONE, md->alpha), md->lp);
+		md->rate_set = SM(md->rb, SA(ONE, SM(SS(ONE, md->c),
+				SS(target_rtt, rtt_meas))));
 	}
 
 	md->rate_set = scaled_min(scaled_max(MPC_MIN_RATE, md->rate_set), MPC_MAX_RATE);

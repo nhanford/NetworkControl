@@ -17,10 +17,8 @@ struct model {
 	// Percent above RTT. Initial and current values.
 	scaled alpha_init;
 	scaled alpha;
-	// RTT weight
-	scaled c1;
-	// RTT variance weight
-	scaled c2;
+	// RTT variance relative weight
+	scaled c;
 
 	u64 timer;
 
@@ -39,7 +37,7 @@ struct model {
 
 // alpha and weight are percentages.
 int model_init(struct model *md, scaled rate_diff, u64 inc_period,
-	u64 dec_period, scaled weight, scaled alpha, scaled c1, scaled c2);
+	u64 dec_period, scaled weight, scaled alpha, scaled c);
 
 void model_release(struct model *md);
 

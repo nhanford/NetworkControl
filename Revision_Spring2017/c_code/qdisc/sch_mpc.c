@@ -98,12 +98,11 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 
 	return model_init(&flow->md,
 		scaled_from_int(100, 20),
-		1000,
-		1,
+		5 << 3,
+		5,
 		scaled_from_int(1, -3),
-		scaled_from_int(1, -2),
-		scaled_from_int(1, 0),
-		scaled_from_int(10, 0));
+		scaled_from_int(1, 1),
+		scaled_from_int(15, -4));
 }
 
 static void flow_release(struct mpc_flow *flow)

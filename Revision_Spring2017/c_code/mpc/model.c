@@ -5,7 +5,7 @@
 
 
 int model_init(struct model *md, scaled rate_diff, u64 inc_period,
-	u64 dec_period, scaled weight, scaled alpha, scaled c1, scaled c2)
+	u64 dec_period, scaled weight, scaled alpha, scaled c)
 {
 	md->rate_diff = rate_diff;
 	md->inc_period = inc_period;
@@ -13,8 +13,7 @@ int model_init(struct model *md, scaled rate_diff, u64 inc_period,
 	md->weight = weight;
 
 	md->alpha_init = alpha;
-	md->c1 = c1;
-	md->c2 = c2;
+	md->c = c;
 
 	mpc_dfs_init(&md->stats);
 

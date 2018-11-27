@@ -19,11 +19,10 @@ import random
 
 LR = 1.0
 ALPHA = 0.1
-C1 = 1.0
-C2 = 10.0
+C = 0.9
 W = 0.01
-IPERIOD = 100
-DPERIOD = 10
+IPERIOD = 40
+DPERIOD = 5
 
 NUM_DATA_POINTS = 2000
 
@@ -39,7 +38,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(LR, ALPHA, C1, C2, W, IPERIOD, DPERIOD)
+        rateler = Controller(LR, ALPHA, C, W, IPERIOD, DPERIOD)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_latency = np.zeros(NUM_DATA_POINTS)
