@@ -9,18 +9,18 @@
 struct model {
 	// Rates are in B/s, and RTTs are in us.
 	scaled rate_diff;
-	scaled weight;
+	scaled learn_rate;
 	u64 inc_period;
 	u64 dec_period;
 	scaled rate_set;
 
-	// Percent above RTT. Initial and current values.
-	scaled alpha_init;
-	scaled alpha;
+	// How far over the minimum RTT should we be.
+	scaled over;
 	// RTT variance relative weight
 	scaled c;
 
 	u64 timer;
+	bool decreasing;
 
 	scaled avg_rate;
 	scaled avg_rtt;
@@ -35,9 +35,8 @@ struct model {
 	struct mpc_dfs_stats stats;
 };
 
-// alpha and weight are percentages.
 int model_init(struct model *md, scaled rate_diff, u64 inc_period,
-	u64 dec_period, scaled weight, scaled alpha, scaled c);
+	u64 dec_period, scaled learn_rate, scaled over, scaled c);
 
 void model_release(struct model *md);
 

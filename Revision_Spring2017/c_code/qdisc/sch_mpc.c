@@ -100,9 +100,9 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 		scaled_from_int(100, 20),
 		5 << 3,
 		5,
-		scaled_from_int(1, -3),
-		scaled_from_int(1, 1),
-		scaled_from_int(15, -4));
+		scaled_from_int(1, -8),
+		scaled_from_int(500, 0),
+		scaled_from_int(255, -8));
 }
 
 static void flow_release(struct mpc_flow *flow)

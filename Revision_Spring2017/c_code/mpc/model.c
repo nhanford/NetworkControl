@@ -5,14 +5,14 @@
 
 
 int model_init(struct model *md, scaled rate_diff, u64 inc_period,
-	u64 dec_period, scaled weight, scaled alpha, scaled c)
+	u64 dec_period, scaled learn_rate, scaled over, scaled c)
 {
 	md->rate_diff = rate_diff;
 	md->inc_period = inc_period;
 	md->dec_period = dec_period;
-	md->weight = weight;
+	md->learn_rate = learn_rate;
 
-	md->alpha_init = alpha;
+	md->over = over;
 	md->c = c;
 
 	mpc_dfs_init(&md->stats);
@@ -30,9 +30,8 @@ void model_release(struct model *md)
 void model_reset(struct model *md)
 {
 	md->timer = md->inc_period;
+	md->decreasing = false;
 	md->rate_set = ZERO;
-
-	md->alpha = md->alpha_init;
 
 	md->avg_rate = ZERO;
 	md->avg_rtt = ZERO;

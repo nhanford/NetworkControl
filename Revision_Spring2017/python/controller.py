@@ -5,9 +5,9 @@ import numpy as np
 INF = 1000
 
 class Controller:
-    def __init__(self, lr, alpha, c, weight, incPeriod, decPeriod):
+    def __init__(self, lr, over, c, weight, incPeriod, decPeriod):
         self.lr = lr
-        self.alphaInit = alpha
+        self.over = over
         self.c = c
         self.weight = weight
         self.incPeriod = incPeriod
@@ -16,7 +16,7 @@ class Controller:
         self.reset()
 
     def reset(self):
-        self.alpha = self.alphaInit
+        self.decreasing = False
         self.timer = self.incPeriod
 
         self.r = 0
@@ -37,20 +37,21 @@ class Controller:
         self.timer -= 1
 
         if self.decPeriod > 0 and self.timer <= 0:
-            opt = self.rB
+            self.decreasing = not self.decreasing
 
-            if self.alpha >= 0:
-                self.alpha = -1#self.alphaInit
+            if self.decreasing:
                 self.lP = l
                 self.timer = self.decPeriod
             else:
-                self.alpha = self.alphaInit
                 self.lB = l
                 self.timer = self.incPeriod
-        else:
-            lt = (1 + self.alpha) * self.lP
-            opt = self.rB * (1 + (1 - self.c) * (lt - l))
 
+        if self.decreasing:
+            lt = 0
+        else:
+            lt = self.lP + self.over
+
+        opt = self.rB * (1 + (1 - self.c) * (lt - l))
         opt = min(max(0.1, opt), 30)
         self.r = opt
 

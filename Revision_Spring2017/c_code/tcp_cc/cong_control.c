@@ -15,18 +15,10 @@
 
 #include "../mpc/control.h"
 
-#define RATE_GAIN (10 << 20)
-#define RATE_MAX 4294967295
-#define PROBING_PERIOD 100
-#define mpc_cc_log(args, ...) printk(KERN_INFO "mpc cc: " args, ##__VA_ARGS__)
-
 
 struct control {
 	struct model *md;
-
 	u32 rate;
-	bool probing;
-	u32 count_down;
 };
 
 
@@ -37,11 +29,8 @@ inline void set_rate(struct sock *sk) {
 
 	sk->sk_pacing_rate = ctl->rate;
 
-	tp->snd_cwnd = max_t(u32, 1, (ctl->rate / tp->mss_cache)
-			* tp->srtt_us / USEC_PER_SEC);
-
-	mpc_cc_log("rate = %u, srtt_us= %u, mss = %u, snd_cwnd = %u\n",
-		ctl->rate, tp->srtt_us, tp->mss_cache, tp->snd_cwnd);
+	tp->snd_cwnd = 10000;//max_t(u32, 1, (ctl->rate / tp->mss_cache)
+			//* tp->srtt_us / USEC_PER_SEC);
 }
 
 void mpc_cc_init(struct sock *sk)
@@ -52,10 +41,13 @@ void mpc_cc_init(struct sock *sk)
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
 
 	ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-	model_init(ctl->md, 100, 10, 50, 50, 5, 1);
-
-	ctl->probing = false;
-	ctl->count_down = 0;
+	model_init(ctl->md,
+		scaled_from_int(100, 20),
+		5 << 3,
+		2,
+		scaled_from_int(1, -8),
+		scaled_from_int(500, 0),
+		scaled_from_int(255, -8));
 }
 
 
@@ -88,15 +80,6 @@ u32 mpc_cc_undo_cwnd(struct sock *sk)
 	struct control *ctl = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
 
-	if (false) {//ctl->probing) {
-		ctl->probing = false;
-		ctl->count_down = PROBING_PERIOD;
-		ctl->md->dstats.probing = false;
-	} else if (ctl->md != NULL) {
-		ctl->rate = control_process(ctl->md, S64_MAX, ctl->rate);
-		set_rate(sk);
-	}
-
 	return tp->snd_cwnd;
 }
 
@@ -116,39 +99,12 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 	// tp->srtt_us = WMA of RTT
 	// tp->tp->mdev_us = Variance of WMA of RTT
 
-	mpc_cc_log("main, srtt_us = %u, rs->rtt_us = %lu, sk_pacing_rate = %u,"
-		   " snd_cwnd = %u, mss = %u\n",
-		   tp->srtt_us, rs->rtt_us, sk->sk_pacing_rate,
-		   tp->snd_cwnd, tp->mss_cache);
-
-	if (ctl->md != NULL) {
-		u32 rtt_us = rs->rtt_us;
-		u32 rate = rs->delivered;
-
-		mpc_cc_log("ctl->md->dstats.rate_set = %llu\n", ctl->md->dstats.rate_set);
-
-		if (ctl->probing) {
-			// Here we're probing. We increase the rate until packet losses are
-			// detected
-
-			if (ctl->rate < RATE_MAX - RATE_GAIN)
-				ctl->rate += RATE_GAIN;
-
-			control_process(ctl->md, rtt_us, ctl->rate);
-		} else {
-			ctl->count_down -= 1;
-
-			if (ctl->count_down == 0) {
-				ctl->probing = true;
-				ctl->md->dstats.probing = true;
-				ctl->rate = RATE_GAIN;
-			} else {
-				ctl->rate = control_process(ctl->md, rtt_us, ctl->rate);
-			}
-		}
+	if (ctl->md != NULL && rs->rtt_us > 0) {
+		ctl->rate = STI(control_process(ctl->md, SFI(0, 0),
+						SFI(ctl->rate, 0),
+						SFI(rs->rtt_us, 0)));
+		set_rate(sk);
 	}
-
-	set_rate(sk);
 }
 
 
@@ -168,7 +124,7 @@ static struct tcp_congestion_ops tcp_mpc_cc_cong_ops __read_mostly = {
 
 static int __init mpc_cc_mod_init(void)
 {
-	mpc_cc_log("mod_init\n");
+	printk(KERN_INFO "mpc: module init\n");
 	tcp_register_congestion_control(&tcp_mpc_cc_cong_ops);
 
 	return 0;
@@ -176,7 +132,7 @@ static int __init mpc_cc_mod_init(void)
 
 static void __exit mpc_cc_mod_exit(void)
 {
-	mpc_cc_log("mod_exit\n");
+	printk(KERN_INFO "mpc: module exit\n");
 	tcp_unregister_congestion_control(&tcp_mpc_cc_cong_ops);
 }
 

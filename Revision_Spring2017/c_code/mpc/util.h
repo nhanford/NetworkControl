@@ -11,8 +11,8 @@
 #endif
 
 // Bytes/s
-#define MPC_MIN_RATE scaled_from_int(100, 20)
-#define MPC_MAX_RATE scaled_from_int(100, 30)
+#define MPC_MIN_RATE scaled_from_int(1000, 20)
+#define MPC_MAX_RATE scaled_from_int(U32_MAX, 0)
 
 static inline scaled wma(scaled weight, scaled avg,
 	scaled x)

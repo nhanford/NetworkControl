@@ -101,7 +101,7 @@ ax9.set_ylabel('MPC Measured Rate (mbit/s)')
 ax11.plot(data.module.time, data.module.lp/1000, 'b--', label = 'lp')
 ax11.set_ylabel('lp (ms)')
 
-ax12.plot(data.module.time, data.module.rb/(8 << 20), 'g--', label = 'rb')
+ax12.plot(data.module.time, 8*data.module.rb/(1 << 20), 'g--', label = 'rb')
 ax12.set_xlabel('Time (s)')
 ax12.set_ylabel('rb (mbits/s)')
 
