@@ -23,6 +23,7 @@ typedef struct {
 
 
 scaled scaled_from_int(scaled_int base, scaled_int exp);
+scaled scaled_from_frac(scaled_int numer, scaled_int denom);
 scaled_int scaled_to_int(scaled x);
 
 scaled scaled_negate(scaled x);

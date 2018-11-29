@@ -51,6 +51,11 @@ scaled scaled_from_int(scaled_int base, scaled_int exp)
 	return ret;
 }
 
+scaled scaled_from_frac(scaled_int numer, scaled_int denom)
+{
+	return scaled_div(scaled_from_int(numer, 0), scaled_from_int(denom, 0));
+}
+
 scaled_int scaled_to_int(scaled x)
 {
 	return shift(x.base, x.exp);

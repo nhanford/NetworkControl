@@ -5,10 +5,11 @@ import numpy as np
 INF = 1000
 
 class Controller:
-    def __init__(self, lr, over, c, weight, incPeriod, decPeriod):
+    def __init__(self, lr, over, c1, c2, weight, incPeriod, decPeriod):
         self.lr = lr
         self.over = over
-        self.c = c
+        self.c1 = c1
+        self.c2 = c2
         self.weight = weight
         self.incPeriod = incPeriod
         self.decPeriod = decPeriod
@@ -23,6 +24,7 @@ class Controller:
         self.lhat = 0
         self.x = 0
         self.x1 = 0
+        self.avgRTT = 0
 
         self.rB = 0
         self.lB = 0
@@ -39,11 +41,12 @@ class Controller:
         if self.decPeriod > 0 and self.timer <= 0:
             self.decreasing = not self.decreasing
 
+            self.lP = l
+            self.lB = 0
+
             if self.decreasing:
-                self.lP = l
                 self.timer = self.decPeriod
             else:
-                self.lB = l
                 self.timer = self.incPeriod
 
         if self.decreasing:
@@ -51,7 +54,13 @@ class Controller:
         else:
             lt = self.lP + self.over
 
-        opt = self.rB * (1 + (1 - self.c) * (lt - l))
+        p = self.weight*self.c1 - self.c1 - self.c2 + 1
+        t1 = p*self.rB*(1 + lt - l)
+        t2 = self.weight*self.c1*self.rB*(self.avgRTT - lt)
+        t3 = self.c2 * self.lP**2 * self.r
+        t4 = self.c2*self.lP**2 + p
+        opt = (t1 + t2 + t3)/t4
+
         opt = min(max(0.1, opt), 30)
         self.r = opt
 
@@ -75,6 +84,8 @@ class Controller:
         else:
             t = 1.0
         self.rB = min(max(1, self.rB + self.lr*t), 30)
+
+        self.avgRTT = self.wma(self.avgRTT, l)
 
     def wma(self, avg, x):
         return (1 - self.weight)*avg + self.weight*x

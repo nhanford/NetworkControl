@@ -97,12 +97,13 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 	flow->last_srtt = 0;
 
 	return model_init(&flow->md,
-		scaled_from_int(100, 20),
+		scaled_from_frac(1, 10),
 		5 << 3,
 		5,
-		scaled_from_int(1, -8),
+		scaled_from_frac(1, 10),
 		scaled_from_int(500, 0),
-		scaled_from_int(255, -8));
+		scaled_from_frac(1, 3),
+		scaled_from_frac(1, 3));
 }
 
 static void flow_release(struct mpc_flow *flow)
