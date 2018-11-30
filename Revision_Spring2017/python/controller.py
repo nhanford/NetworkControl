@@ -5,11 +5,12 @@ import numpy as np
 INF = 1000
 
 class Controller:
-    def __init__(self, lr, lossRate, weight, c):
+    def __init__(self, lr, lossRate, weight, c1, c2):
         self.lr = lr
         self.lossRate = lossRate
         self.weight = weight
-        self.c = c
+        self.c1 = c1
+        self.c2 = c2
 
         self.reset()
 
@@ -27,7 +28,10 @@ class Controller:
         if self.r > 0:
             self.update(self.r, l)
 
-        opt = self.rB + self.c*self.avgLoss + (1 - self.c) * self.lossRate
+        p = self.weight*self.avgLoss - self.weight + 1
+        t1 = (p - self.c2)*self.rB + self.c2*self.r
+        t2 = (1 - self.c1 - self.c2)*self.lossRate + self.weight*self.c1*self.avgLoss
+        opt = (t1 + t2)/p
         opt = min(max(0.1, opt), 30)
         self.r = opt
 

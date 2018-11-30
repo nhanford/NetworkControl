@@ -20,7 +20,8 @@ import random
 LR = 0.1
 LOSSRATE = 5
 WEIGHT = 0.1
-C = 0.9
+C1 = 1/3
+C2 = 1/3
 
 NUM_DATA_POINTS = 5000
 
@@ -36,7 +37,7 @@ class Tester:
         @arg response A model that takes a rate and determine the connection RTT.
         This model should have a method of the form generate(rate).
         """
-        rateler = Controller(LR, LOSSRATE, WEIGHT, C)
+        rateler = Controller(LR, LOSSRATE, WEIGHT, C1, C2)
 
         recorded_index = np.arange(NUM_DATA_POINTS)
         recorded_loss = np.zeros(NUM_DATA_POINTS)
