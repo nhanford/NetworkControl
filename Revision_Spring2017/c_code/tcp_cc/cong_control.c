@@ -42,12 +42,13 @@ void mpc_cc_init(struct sock *sk)
 
 	ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
 	model_init(ctl->md,
-		scaled_from_int(100, 20),
+		scaled_from_frac(1, 10),
 		5 << 3,
-		2,
-		scaled_from_int(1, -8),
+		5,
+		scaled_from_frac(1, 10),
 		scaled_from_int(500, 0),
-		scaled_from_int(255, -8));
+		scaled_from_frac(1, 3),
+		scaled_from_frac(1, 3));
 }
 
 

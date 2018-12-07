@@ -4,16 +4,17 @@
 #include "model.h"
 
 
-int model_init(struct model *md, scaled rate_diff, u64 inc_period,
-	u64 dec_period, scaled learn_rate, scaled over, scaled c)
+int model_init(struct model *md, scaled weight, u64 inc_period,
+	u64 dec_period, scaled learn_rate, scaled over, scaled c1, scaled c2)
 {
-	md->rate_diff = rate_diff;
+	md->weight = weight;
 	md->inc_period = inc_period;
 	md->dec_period = dec_period;
 	md->learn_rate = learn_rate;
 
 	md->over = over;
-	md->c = c;
+	md->c1 = c1;
+	md->c2 = c2;
 
 	mpc_dfs_init(&md->stats);
 
@@ -33,7 +34,6 @@ void model_reset(struct model *md)
 	md->decreasing = false;
 	md->rate_set = ZERO;
 
-	md->avg_rate = ZERO;
 	md->avg_rtt = ZERO;
 
 	md->x0 = ZERO;

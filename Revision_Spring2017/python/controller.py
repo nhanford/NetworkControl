@@ -15,6 +15,7 @@ class Controller:
         self.reset()
 
     def reset(self):
+
         self.r = 0
         self.lhat = 0
 

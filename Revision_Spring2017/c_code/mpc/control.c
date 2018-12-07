@@ -19,6 +19,7 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 {
 	scaled target_rtt;
 	scaled xhat;
+	scaled p, t1, t2, t3, t4;
 
 	if (SLT(ZERO, md->rate_set) && SLT(ZERO, rtt_meas))
 		// NOTE: We use rate_set because rate_mead is not accurate, and
@@ -45,8 +46,14 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 	else
 		target_rtt = SA(md->lp, md->over);
 
-	md->rate_set = SM(md->rb, SA(ONE, SM(SS(ONE, md->c),
-			SS(target_rtt, rtt_meas))));
+	p = SA(SS(SS(SM(md->weight, md->c1), md->c1), md->c2), ONE);
+	t1 = SM(SM(p, md->rb), SA(ONE, SS(target_rtt, rtt_meas)));
+	t2 = SM(SM(SM(md->weight, md->c1), md->rb), SS(md->avg_rtt, target_rtt));
+	t3 = SM(SM(md->c2, SIP(md->lp, 2)), md->rate_set);
+	t4 = SA(SM(md->c2, SIP(md->lp, 2)), p);
+
+	if (!SEQ(t4, ZERO))
+		md->rate_set = SD(SA(SA(t1, t2), t3), t4);
 
 	md->rate_set = scaled_min(scaled_max(MPC_MIN_RATE, md->rate_set), MPC_MAX_RATE);
 
@@ -86,4 +93,6 @@ static void control_update(struct model *md, scaled rate_meas, scaled rtt_meas)
 	}
 
 	md->rb = scaled_min(scaled_max(MPC_MIN_RATE, md->rb), MPC_MAX_RATE);
+
+	md->avg_rtt = wma(md->weight, md->avg_rtt, rtt_meas);
 }
