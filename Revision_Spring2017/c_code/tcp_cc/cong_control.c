@@ -19,7 +19,18 @@
 struct control {
 	struct model *md;
 	u32 rate;
+	u64 losses;
+	u64 mss;
+	u64 start_time;
 };
+
+
+scaled get_loss_rate(struct control *ctl)
+{
+	u64 now = ktime_get_ns();
+	return SD(SM(SFI(ctl->losses, 0), SFI(ctl->mss, 0)),
+		SD(SFI(now - ctl->start_time, 0), SFI(NSEC_PER_SEC, 0)));
+}
 
 
 // Set the pacing rate. rate is in bytes/sec.
@@ -41,12 +52,13 @@ void mpc_cc_init(struct sock *sk)
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
 
 	ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
+	ctl->losses = 0;
+	ctl->mss = tp->mss_cache;
+	ctl->start_time = ktime_get_ns();
 	model_init(ctl->md,
 		scaled_from_frac(1, 10),
-		5 << 3,
-		5,
 		scaled_from_frac(1, 10),
-		scaled_from_int(500, 0),
+		scaled_from_int(1, 8),
 		scaled_from_frac(1, 3),
 		scaled_from_frac(1, 3));
 }
@@ -100,10 +112,13 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 	// tp->srtt_us = WMA of RTT
 	// tp->tp->mdev_us = Variance of WMA of RTT
 
-	if (ctl->md != NULL && rs->rtt_us > 0) {
+	ctl->mss = tp->mss_cache;
+	ctl->losses += rs->losses;
+
+	if (ctl->md != NULL) {
 		ctl->rate = STI(control_process(ctl->md, SFI(0, 0),
 						SFI(ctl->rate, 0),
-						SFI(rs->rtt_us, 0)));
+						ZERO));//get_loss_rate(ctl)));
 		set_rate(sk);
 	}
 }
@@ -125,7 +140,7 @@ static struct tcp_congestion_ops tcp_mpc_cc_cong_ops __read_mostly = {
 
 static int __init mpc_cc_mod_init(void)
 {
-	printk(KERN_INFO "mpc: module init\n");
+	printk(KERN_INFO "mpc_cc: module init\n");
 	tcp_register_congestion_control(&tcp_mpc_cc_cong_ops);
 
 	return 0;
@@ -133,7 +148,7 @@ static int __init mpc_cc_mod_init(void)
 
 static void __exit mpc_cc_mod_exit(void)
 {
-	printk(KERN_INFO "mpc: module exit\n");
+	printk(KERN_INFO "mpc_cc: module exit\n");
 	tcp_unregister_congestion_control(&tcp_mpc_cc_cong_ops);
 }
 

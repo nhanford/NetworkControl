@@ -44,15 +44,13 @@ class Logger:
 
             for mpc in glob.glob("/sys/kernel/debug/mpc/*"):
                 try:
-                    with open(mpc + "/rtt_meas_us") as rttF, \
-                            open(mpc + "/rtt_pred_us") as rttPF, \
+                    with open(mpc + "/loss_meas") as lossF, \
+                            open(mpc + "/loss_pred") as lossPF, \
                             open(mpc + "/rate_meas") as rateMF, \
                             open(mpc + "/rate_set") as rateSF, \
-                            open(mpc + "/lp") as lpF, \
                             open(mpc + "/rb") as rbF, \
-                            open(mpc + "/x") as xF:
-                        rtt = int(rttF.read())
-                        rttP = int(rttPF.read())
+                        loss = int(lossF.read())
+                        lossP = int(lossPF.read())
                         rateS = int(rateSF.read())
                         rateM = int(rateMF.read())
                         lp = int(lpF.read())
@@ -60,7 +58,7 @@ class Logger:
                         x = int(xF.read())
 
                         info = {'time': t, 'id': os.path.basename(mpc),
-                            'rtt_meas_us': rtt, 'rtt_pred_us': rttP,
+                            'loss_meas': loss, 'loss_pred': lossP,
                             'rate_meas': rateM, 'rate_set': rateS,
                             'lp': lp, 'rb': rb, 'x': x}
 
@@ -68,7 +66,7 @@ class Logger:
 
                         if self.verbose:
                             print("RTT (ms): {}, Set Rate (B/s): {}".format(
-                                info['rtt_meas_us']/1000.0, info['rate_set']))
+                                info['loss_meas'], info['rate_set']))
 
                 except FileNotFoundError as err:
                     print(err)

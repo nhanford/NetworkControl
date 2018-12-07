@@ -7,36 +7,25 @@
 #define MODEL_H
 
 struct model {
-	// Rates are in B/s, and RTTs are in us.
+	// Rates are in B/s.
 	scaled weight;
 	scaled learn_rate;
-	u64 inc_period;
-	u64 dec_period;
 	scaled rate_set;
 
-	// How far over the minimum RTT should we be.
+	// What should the loss rate be?
 	scaled over;
-	// RTT variance and control action relative weights.
+	// Loss rate variance and control action relative weights.
 	scaled c1;
 	scaled c2;
 
-	u64 timer;
-	bool decreasing;
-
-	scaled avg_rtt;
-
-	scaled x0;
-	scaled x1;
-
+	scaled avg_loss;
 	scaled rb;
-	scaled lb;
-	scaled lp;
 
 	struct mpc_dfs_stats stats;
 };
 
-int model_init(struct model *md, scaled weight, u64 inc_period,
-	u64 dec_period, scaled learn_rate, scaled over, scaled c1, scaled c2);
+int model_init(struct model *md, scaled weight, scaled learn_rate, scaled over,
+	scaled c1, scaled c2);
 
 void model_release(struct model *md);
 
