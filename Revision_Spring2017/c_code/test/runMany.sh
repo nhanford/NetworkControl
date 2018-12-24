@@ -1,8 +1,82 @@
 #!/bin/sh
 
-dir=$1
-test=$2
+if [ $# -lt 2 ]
+then
+    echo "Usage: $0 testdir qdev"
+    exit 1
+fi
 
-sudo ./run.py "$dir/sacr/$test" sacr-pt1.es.net -t bwctl
-sudo ./run.py "$dir/denv/$test" denv-pt1.es.net -t bwctl
-sudo ./run.py "$dir/amst/$test" amst-pt1.es.net -t bwctl
+testdir=$(realpath $1)
+qdev=$2
+base=$(realpath ..)
+
+
+vexec() {
+    echo $@
+    $@
+
+    ret=$?
+
+    if [ $ret -ne 0 ]
+    then
+        echo "Return status was $ret. aborting"
+        exit 1
+    fi
+}
+
+runSet() {
+    dir=$testdir/$1
+
+    vexec mkdir -p $dir
+
+    vexec cd $base/test
+    vexec ./run.py "$dir/sacr" sacr-pt1.es.net -t bwctl
+    vexec ./run.py "$dir/denv" denv-pt1.es.net -t bwctl
+    vexec ./run.py "$dir/amst" amst-pt1.es.net -t bwctl
+}
+
+banner() {
+    echo "===== $@ ====="
+}
+
+banner "BBR/fq"
+vexec sysctl -w net/ipv4/tcp_congestion_control=bbr
+vexec tc qdisc replace dev $qdev root fq
+runSet bbr-fq
+vexec tc qdisc delete dev $qdev root
+
+echo
+
+banner "cubic/pfifo"
+vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
+vexec tc qdisc replace dev $qdev root pfifo
+runSet cubic-pfifo
+vexec tc qdisc delete dev $qdev root
+
+echo
+
+banner "cubic/MPCC"
+vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
+vexec cd $base/qdisc
+vexec make
+vexec make start "QDEV=$qdev"
+runSet qd
+vexec cd $base/qdisc
+vexec make stop "QDEV=$qdev"
+
+echo
+
+banner "MPCC/fq"
+vexec cd $base/tcp_cc
+vexec make
+vexec make start "QDEV=$qdev"
+runSet cc
+vexec cd $base/tcp_cc
+sleep 5
+vexec make stop "QDEV=$qdev"
+
+echo
+
+banner "cleanup"
+vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
+vexec tc qdisc delete dev $qdev root
