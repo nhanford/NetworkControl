@@ -31,9 +31,9 @@
 // TODO: Move parameters to iproute2 interface
 static int weight = 10;
 static int learn_rate = 10;
-static int over = 500;
-static int c1 = 33;
-static int c2 = 33;
+static int over = 200;
+static int c1 = 40;
+static int c2 = 10;
 
 // All parameter accesses are 0 so they can only be set on insertion.
 module_param(weight, int, 0);
@@ -274,7 +274,7 @@ static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 		list_for_each_entry(it, &q->sending, send_list) {
 			if (it->time_to_send <= flow->time_to_send)
 				last = &it->send_list;
-			else if(it->time_to_send > flow->time_to_send)
+			else
 				break;
 		}
 

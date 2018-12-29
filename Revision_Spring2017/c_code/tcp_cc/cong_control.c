@@ -18,9 +18,9 @@
 
 static int weight = 10;
 static int learn_rate = 10;
-static int over = 500;
-static int c1 = 33;
-static int c2 = 33;
+static int over = 200;
+static int c1 = 40;
+static int c2 = 10;
 
 module_param(weight, int, 0644);
 MODULE_PARM_DESC(weight, "weight for moving averages (in %)");
