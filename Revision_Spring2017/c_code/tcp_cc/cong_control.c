@@ -16,6 +16,28 @@
 #include "../mpc/control.h"
 
 
+static int weight = 10;
+static int learn_rate = 10;
+static int over = 200;
+static int c1 = 40;
+static int c2 = 10;
+
+module_param(weight, int, 0644);
+MODULE_PARM_DESC(weight, "weight for moving averages (in %)");
+
+module_param(learn_rate, int, 0644);
+MODULE_PARM_DESC(learn_rate, "learning rate (in %)");
+
+module_param(over, int, 0644);
+MODULE_PARM_DESC(over, "how far over minimum RTT we should target (in us)");
+
+module_param(c1, int, 0644);
+MODULE_PARM_DESC(c1, "weight for reducing RTT variance (in %)");
+
+module_param(c2, int, 0644);
+MODULE_PARM_DESC(c2, "weight for reducing control action (in %)");
+
+
 struct control {
 	struct model *md;
 	u32 rate;
@@ -56,11 +78,11 @@ void mpc_cc_init(struct sock *sk)
 	ctl->mss = tp->mss_cache;
 	ctl->start_time = ktime_get_ns();
 	model_init(ctl->md,
-		scaled_from_frac(1, 10),
-		scaled_from_frac(1, 10),
-		scaled_from_int(1, 8),
-		scaled_from_frac(1, 3),
-		scaled_from_frac(1, 3));
+		scaled_from_frac(weight, 100),
+		scaled_from_frac(learn_rate, 100),
+		scaled_from_int(over, 1),
+		scaled_from_frac(c1, 100),
+		scaled_from_frac(c2, 100));
 }
 
 

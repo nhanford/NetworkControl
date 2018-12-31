@@ -28,6 +28,30 @@
 #define HT_BITS (5)
 
 
+// TODO: Move parameters to iproute2 interface
+static int weight = 10;
+static int learn_rate = 10;
+static int over = 200;
+static int c1 = 40;
+static int c2 = 10;
+
+// All parameter accesses are 0 so they can only be set on insertion.
+module_param(weight, int, 0);
+MODULE_PARM_DESC(weight, "weight for moving averages (in %)");
+
+module_param(learn_rate, int, 0);
+MODULE_PARM_DESC(learn_rate, "learning rate (in %)");
+
+module_param(over, int, 0);
+MODULE_PARM_DESC(over, "how far over minimum RTT we should target (in us)");
+
+module_param(c1, int, 0);
+MODULE_PARM_DESC(c1, "weight for reducing RTT variance (in %)");
+
+module_param(c2, int, 0);
+MODULE_PARM_DESC(c2, "weight for reducing control action (in %)");
+
+
 struct mpc_flow {
 	u32 addr;
 
@@ -96,14 +120,16 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 
 	flow->last_srtt = 0;
 
-	return model_init(&flow->md,
-		scaled_from_frac(1, 10),
+	model_init(&flow->md,
+		scaled_from_frac(weight, 100),
 		5 << 3,
 		5,
-		scaled_from_frac(1, 10),
-		scaled_from_int(500, 0),
-		scaled_from_frac(1, 3),
-		scaled_from_frac(1, 3));
+		scaled_from_frac(learn_rate, 100),
+		scaled_from_int(over, 0),
+		scaled_from_frac(c1, 100),
+		scaled_from_frac(c2, 100));
+
+	return 0;
 }
 
 static void flow_release(struct mpc_flow *flow)
@@ -248,7 +274,7 @@ static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 		list_for_each_entry(it, &q->sending, send_list) {
 			if (it->time_to_send <= flow->time_to_send)
 				last = &it->send_list;
-			else if(it->time_to_send > flow->time_to_send)
+			else
 				break;
 		}
 
