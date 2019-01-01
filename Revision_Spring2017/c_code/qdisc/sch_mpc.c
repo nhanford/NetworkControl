@@ -99,6 +99,9 @@ struct mpc_sched_data {
 };
 
 
+static struct mpc_dfs debugfs;
+
+
 static int flow_init(struct mpc_flow *flow, u64 addr)
 {
 	flow->addr = addr;
@@ -129,11 +132,14 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 		scaled_from_frac(c1, 100),
 		scaled_from_frac(c2, 100));
 
+	mpc_dfs_register(&debugfs, &flow->md.stats);
+
 	return 0;
 }
 
 static void flow_release(struct mpc_flow *flow)
 {
+	mpc_dfs_unregister(&debugfs, &flow->md.stats);
 	model_release(&flow->md);
 }
 
@@ -519,6 +525,7 @@ MODULE_DESCRIPTION("A Qdisc that uses model predictive control.");
 MODULE_VERSION("0.01");
 
 static int __init mpcqd_init(void) {
+	mpc_dfs_init(&debugfs);
 	register_qdisc(&mpc_qdisc_ops);
 	printk(KERN_INFO "Loaded module mpcqd\n");
 
@@ -526,6 +533,7 @@ static int __init mpcqd_init(void) {
 }
 
 static void __exit mpcqd_exit(void) {
+	mpc_dfs_release(&debugfs);
 	unregister_qdisc(&mpc_qdisc_ops);
 	printk(KERN_INFO "Removed module mpcqd\n");
 }

@@ -16,8 +16,6 @@ int model_init(struct model *md, scaled weight, u64 inc_period,
 	md->c1 = c1;
 	md->c2 = c2;
 
-	mpc_dfs_init(&md->stats);
-
 	model_reset(md);
 
 	return 0;
@@ -25,7 +23,6 @@ int model_init(struct model *md, scaled weight, u64 inc_period,
 
 void model_release(struct model *md)
 {
-	mpc_dfs_release(&md->stats);
 }
 
 void model_reset(struct model *md)

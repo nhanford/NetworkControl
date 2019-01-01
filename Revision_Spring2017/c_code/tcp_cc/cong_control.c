@@ -44,6 +44,9 @@ struct control {
 };
 
 
+static struct mpc_dfs debugfs;
+
+
 // Set the pacing rate. rate is in bytes/sec.
 inline void set_rate(struct sock *sk) {
 	struct control *ctl = inet_csk_ca(sk);
@@ -71,6 +74,8 @@ void mpc_cc_init(struct sock *sk)
 		scaled_from_int(over, 0),
 		scaled_from_frac(c1, 100),
 		scaled_from_frac(c2, 100));
+
+	mpc_dfs_register(&debugfs, &ctl->md->stats);
 }
 
 
@@ -79,6 +84,7 @@ void mpc_cc_release(struct sock *sk)
 	struct control *ctl = inet_csk_ca(sk);
 
 	if (ctl->md != NULL) {
+		mpc_dfs_unregister(&debugfs, &ctl->md->stats);
 		model_release(ctl->md);
 		kfree(ctl->md);
 	}
@@ -148,6 +154,7 @@ static struct tcp_congestion_ops tcp_mpc_cc_cong_ops __read_mostly = {
 static int __init mpc_cc_mod_init(void)
 {
 	printk(KERN_INFO "mpc: module init\n");
+	mpc_dfs_init(&debugfs);
 	tcp_register_congestion_control(&tcp_mpc_cc_cong_ops);
 
 	return 0;
@@ -156,6 +163,7 @@ static int __init mpc_cc_mod_init(void)
 static void __exit mpc_cc_mod_exit(void)
 {
 	printk(KERN_INFO "mpc: module exit\n");
+	mpc_dfs_release(&debugfs);
 	tcp_unregister_congestion_control(&tcp_mpc_cc_cong_ops);
 }
 
