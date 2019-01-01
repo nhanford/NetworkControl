@@ -33,9 +33,10 @@ if mid is None and args.guess_id:
     groups = data.module.groupby('id')
 
     if not len(groups) == 0:
-        mid = max(groups, key = lambda x: x[1].rtt_meas_us.std())[0]
+        mid = max(groups, key = lambda x: x[1].loss_meas.std())[0]
 
 if mid is not None:
+    print("Using id {}".format(mid))
     data.module = data.module.query("id == @mid")
 
 rtt_adj = data.stream.rtt/1000
@@ -43,8 +44,8 @@ rttVar_adj = data.stream.rttvar/1000
 rate_adj = data.stream.bits_per_second/(1<<20)
 cwnd_adj = data.stream.snd_cwnd/(1<<10)
 
-mpcRTT_adj = data.module.rtt_meas_us/1000
-mpcRTTPred_adj = data.module.rtt_pred_us/1000
+mpcLoss_adj = 8*data.module.loss_meas
+mpcLossPred_adj = 8*data.module.loss_pred
 mpcRateM_adj = 8*data.module.rate_meas/(1 << 20)
 mpcRateS_adj = 8*data.module.rate_set/(1 << 20)
 
@@ -86,10 +87,10 @@ ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window (kbytes)')
 
 
-ax6.plot(data.module.time, mpcRTT_adj, 'ro', label = 'MPC Observed RTT')
-ax6.plot(data.module.time, mpcRTTPred_adj, 'y', label = 'MPC Predicted RTT')
+ax6.plot(data.module.time, mpcLoss_adj, 'ro', label = 'MPC Observed Loss')
+ax6.plot(data.module.time, mpcLossPred_adj, 'y', label = 'MPC Predicted Loss')
 ax6.set_xlabel('Time (s)')
-ax6.set_ylabel('MPC RTT (ms)')
+ax6.set_ylabel('MPC Loss (bits/s)')
 
 ax8.plot(data.module.time, mpcRateS_adj, 'bo', label = 'MPC Set Rate')
 ax8.set_xlabel('Time (s)')
@@ -98,15 +99,9 @@ ax8.set_ylabel('MPC Set Rate (mbit/s)')
 ax9.plot(data.module.time, mpcRateM_adj, 'ro', label = 'MPC Observed Rate')
 ax9.set_ylabel('MPC Measured Rate (mbit/s)')
 
-ax11.plot(data.module.time, data.module.lp/1000, 'b--', label = 'lp')
-ax11.set_ylabel('lp (ms)')
-
 ax12.plot(data.module.time, 8*data.module.rb/(1 << 20), 'g--', label = 'rb')
 ax12.set_xlabel('Time (s)')
 ax12.set_ylabel('rb (mbits/s)')
-
-ax13.plot(data.module.time, data.module.x/1000, 'y--', label = 'x')
-ax13.set_ylabel('x (ms)')
 
 
 if args.limit_quantile is not None:
@@ -116,10 +111,10 @@ if args.limit_quantile is not None:
     ax4.set_ylim(0, data.stream.retransmits.quantile(args.limit_quantile)*2)
     ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
 
-    if len(mpcRTT_adj) > 0:
-        q1 = mpcRTT_adj.quantile(args.limit_quantile)
-        q2 = mpcRTTPred_adj.quantile(args.limit_quantile)
-        ax6.set_ylim(0, min(q1, q2)*2)
+    if len(mpcLoss_adj) > 0:
+        q1 = mpcLoss_adj.quantile(args.limit_quantile)
+        q2 = mpcLossPred_adj.quantile(args.limit_quantile)
+        ax6.set_ylim(0, q1*2)
 
     if len(mpcRateS_adj) > 0:
         ax8.set_ylim(0, mpcRateS_adj.quantile(args.limit_quantile)*2)

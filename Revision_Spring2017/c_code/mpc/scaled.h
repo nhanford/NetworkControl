@@ -20,6 +20,7 @@ typedef struct {
 #define ZERO ((scaled) {0, 0})
 #define ONE scaled_from_int(1, 0)
 #define TWO scaled_from_int(2, 0)
+#define SCALED_LARGE scaled_from_int(S64_MAX, 0)
 
 
 scaled scaled_from_int(scaled_int base, scaled_int exp);

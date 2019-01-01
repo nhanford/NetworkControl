@@ -18,8 +18,8 @@
 
 static int weight = 10;
 static int learn_rate = 10;
-static int over = 200;
-static int c1 = 40;
+static int over = 1000;
+static int c1 = 10;
 static int c2 = 10;
 
 module_param(weight, int, 0644);
@@ -46,12 +46,17 @@ struct control {
 	u64 start_time;
 };
 
+static struct mpc_dfs debugfs;
+
 
 scaled get_loss_rate(struct control *ctl)
 {
 	u64 now = ktime_get_ns();
-	return SD(SM(SFI(ctl->losses, 0), SFI(ctl->mss, 0)),
+
+	scaled rate = SD(SM(SFI(ctl->losses, 0), SFI(ctl->mss, 0)),
 		SD(SFI(now - ctl->start_time, 0), SFI(NSEC_PER_SEC, 0)));
+
+	return rate;
 }
 
 
@@ -83,6 +88,8 @@ void mpc_cc_init(struct sock *sk)
 		scaled_from_int(over, 1),
 		scaled_from_frac(c1, 100),
 		scaled_from_frac(c2, 100));
+
+	mpc_dfs_register(&debugfs, &ctl->md->stats);
 }
 
 
@@ -92,6 +99,7 @@ void mpc_cc_release(struct sock *sk)
 
 	if (ctl->md != NULL) {
 		model_release(ctl->md);
+		mpc_dfs_unregister(&debugfs, &ctl->md->stats);
 		kfree(ctl->md);
 	}
 }
@@ -140,8 +148,10 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 	if (ctl->md != NULL) {
 		ctl->rate = STI(control_process(ctl->md, SFI(0, 0),
 						SFI(ctl->rate, 0),
-						ZERO));//get_loss_rate(ctl)));
+						get_loss_rate(ctl)));
 		set_rate(sk);
+	} else {
+		mpc_cc_init(sk);
 	}
 }
 
@@ -165,6 +175,8 @@ static int __init mpc_cc_mod_init(void)
 	printk(KERN_INFO "mpc_cc: module init\n");
 	tcp_register_congestion_control(&tcp_mpc_cc_cong_ops);
 
+	mpc_dfs_init(&debugfs);
+
 	return 0;
 }
 
@@ -172,6 +184,7 @@ static void __exit mpc_cc_mod_exit(void)
 {
 	printk(KERN_INFO "mpc_cc: module exit\n");
 	tcp_unregister_congestion_control(&tcp_mpc_cc_cong_ops);
+	mpc_dfs_release(&debugfs);
 }
 
 MODULE_LICENSE("GPL");

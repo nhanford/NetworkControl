@@ -48,19 +48,17 @@ class Logger:
                             open(mpc + "/loss_pred") as lossPF, \
                             open(mpc + "/rate_meas") as rateMF, \
                             open(mpc + "/rate_set") as rateSF, \
-                            open(mpc + "/rb") as rbF, \
+                            open(mpc + "/rb") as rbF:
                         loss = int(lossF.read())
                         lossP = int(lossPF.read())
-                        rateS = int(rateSF.read())
                         rateM = int(rateMF.read())
-                        lp = int(lpF.read())
+                        rateS = int(rateSF.read())
                         rb = int(rbF.read())
-                        x = int(xF.read())
 
                         info = {'time': t, 'id': os.path.basename(mpc),
                             'loss_meas': loss, 'loss_pred': lossP,
                             'rate_meas': rateM, 'rate_set': rateS,
-                            'lp': lp, 'rb': rb, 'x': x}
+                            'rb': rb}
 
                         data.append(info)
 

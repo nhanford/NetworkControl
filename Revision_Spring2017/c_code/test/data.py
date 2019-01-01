@@ -19,8 +19,8 @@ def getModuleData(inFile):
 
         # columns is for when there are no entries.
         df = pd.DataFrame(list(filter(lambda e: e != {}, pdata)),
-                columns = ["time", "id", "rtt_meas_us", "rtt_pred_us",
-                    "rate_meas", "rate_set", "lp", "rb", "x"])
+                columns = ["time", "id", "loss_meas", "loss_pred",
+                    "rate_meas", "rate_set", "rb"])
 
         return (pdata, df)
 
