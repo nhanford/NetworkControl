@@ -5,10 +5,7 @@
 #include "dfs.h"
 
 
-static struct dentry *root = NULL;
-static unsigned long long alive = 0;
 static DEFINE_SPINLOCK(dfs_lock);
-static unsigned long long dfs_id = 0;
 
 
 static int debugfs_s64_set(void *data, u64 val)
