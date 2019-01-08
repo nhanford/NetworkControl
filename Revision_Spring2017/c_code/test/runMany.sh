@@ -42,7 +42,7 @@ banner() {
 banner "reno/pfifo"
 vexec sysctl -w net/ipv4/tcp_congestion_control=reno
 vexec tc qdisc replace dev $qdev root pfifo
-runSet cubic-pfifo
+runSet reno-pfifo
 vexec tc qdisc delete dev $qdev root
 
 echo
@@ -76,7 +76,7 @@ vexec sysctl -w net/ipv4/tcp_congestion_control=reno
 vexec cd $base/qdisc
 vexec make
 vexec make start "QDEV=$qdev"
-runSet cubic-mpccc
+runSet reno-mpccc
 vexec cd $base/qdisc
 vexec make stop "QDEV=$qdev"
 
