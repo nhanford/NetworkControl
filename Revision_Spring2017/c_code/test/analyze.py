@@ -16,17 +16,23 @@ args = parser.parse_args()
 
 data = Data(args.test)
 
-print("For BWCtl")
-print(data.stream[['bits_per_second', 'rtt', 'rttvar', 'retransmits', 'snd_cwnd']].describe())
+#print("For BWCtl")
+#print(data.stream[['bits_per_second', 'rtt', 'rttvar', 'retransmits', 'snd_cwnd']].describe())
 
-print("\nFor Kernel Module")
-print(data.module[['rtt_meas_us', 'rate_set']].describe())
+print("Mean RTT: {}".format(data.stream.rtt.mean()))
+print("RTT Std: {}".format(np.sqrt(data.stream.rttvar.mean())))
+print("Mean Rate: {:e}".format(data.stream.bits_per_second.mean()))
+print("Rate Std: {:e}".format(data.stream.bits_per_second.std()))
+print("Total Losses: {}".format(data.stream.retransmits.sum()))
 
-idRTTMean = pd.DataFrame(columns=['id', 'mean_rtt_meas_us', 'rtt_std'])
-for x in data.module.groupby('id'):
-    idRTTMean = idRTTMean.append({'id': x[0],
-        'mean_rtt_meas_us': x[1].rtt_meas_us.mean(),
-        'rtt_std': x[1].rtt_meas_us.std()},
-        ignore_index = True)
-
-print(idRTTMean)
+#print("\nFor Kernel Module")
+#print(data.module[['rtt_meas_us', 'rate_set']].describe())
+#
+#idRTTMean = pd.DataFrame(columns=['id', 'mean_rtt_meas_us', 'rtt_std'])
+#for x in data.module.groupby('id'):
+#    idRTTMean = idRTTMean.append({'id': x[0],
+#        'mean_rtt_meas_us': x[1].rtt_meas_us.mean(),
+#        'rtt_std': x[1].rtt_meas_us.std()},
+#        ignore_index = True)
+#
+#print(idRTTMean)
