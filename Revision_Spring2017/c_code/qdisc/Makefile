@@ -9,11 +9,11 @@ mpcqd-y += $(MPC_DIR)/dfs.o $(MPC_DIR)/model.o $(MPC_DIR)/control.o \
 	$(MPC_DIR)/scaled.o
 ccflags-y += -I$(shell realpath $(MPC_DIR)) -g -O0 -DDEBUG
 
-all: q_mpc.so
+all: #q_mpc.so
 	make -C "/lib/modules/$(shell uname -r)/build" M=$(PWD) modules
 
-q_mpc.so: q_mpc.c
-	gcc -shared -o $@ $< -fPIC -I$(IPROUTE2)/include -I$(IPROUTE2)/tc
+#q_mpc.so: q_mpc.c
+#	gcc -shared -o $@ $< -fPIC -I$(IPROUTE2)/include -I$(IPROUTE2)/tc
 
 clean:
 	make -C "/lib/modules/$(shell uname -r)/build" M=$(PWD) clean

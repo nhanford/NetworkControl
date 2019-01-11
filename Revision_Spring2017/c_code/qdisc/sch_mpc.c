@@ -24,8 +24,8 @@
 
 
 #define MAX_FLOWS (1 << 10)
-#define INTER_TRAIN_TIME_NS (10*NSEC_PER_SEC)
 #define HT_BITS (5)
+#define RESET_DELAY (100*NSEC_PER_USEC) // In ns
 
 
 // TODO: Move parameters to iproute2 interface
@@ -185,8 +185,9 @@ static void flow_update_time_to_send(struct mpc_flow *flow, u64 now)
 	u64 min_delay;
 
 	if (flow->set_rate > 0) {
-		min_delay = (flow->bytes_sent + flow->last_bytes_sent) / flow->set_rate;
+		min_delay = flow->bytes_sent + flow->last_bytes_sent;
 		min_delay *= NSEC_PER_SEC;
+		min_delay /= flow->set_rate;
 		min_delay -= now - flow->time_start;
 	} else {
 		min_delay = 0;
@@ -289,7 +290,7 @@ static void mpc_add_flow(struct Qdisc *sch, struct mpc_flow *flow)
 }
 
 
-// Add a flow to the list of flows that have a packet to send.
+// Remove a flow from the list of flows that have a packet to send.
 static void mpc_del_flow(struct Qdisc *sch, struct mpc_flow *flow)
 {
 	list_del_init(&flow->send_list);
@@ -326,6 +327,13 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 		struct sk_buff **to_free)
 {
 	struct mpc_flow *flow = mpc_classify(sch, skb);
+	u64 now = ktime_get_ns();
+
+	// Reset flow if nothing has been sent on it in a while.
+	if (flow->qlen == 0 && now - flow->time_last_sent > RESET_DELAY) {
+		flow->bytes_sent = 0;
+		flow->time_start = now;
+	}
 
 	if (flow == NULL || flow->qlen == sch->limit) {
 		return qdisc_drop(skb, sch, to_free);
