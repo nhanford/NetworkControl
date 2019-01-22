@@ -32,24 +32,32 @@
 static int weight = 10;
 static int learn_rate = 10;
 static int over = 200;
-static int c1 = 40;
-static int c2 = 10;
+static int min_rate = 1 << 10;
+static int max_rate = 25 << 10;
+static int c1 = 400000;
+static int c2 = 10000;
 
 // All parameter accesses are 0 so they can only be set on insertion.
-module_param(weight, int, 0);
+module_param(weight, int, 0644);
 MODULE_PARM_DESC(weight, "weight for moving averages (in %)");
 
-module_param(learn_rate, int, 0);
+module_param(learn_rate, int, 0644);
 MODULE_PARM_DESC(learn_rate, "learning rate (in %)");
 
-module_param(over, int, 0);
+module_param(over, int, 0644);
 MODULE_PARM_DESC(over, "how far over minimum RTT we should target (in us)");
 
-module_param(c1, int, 0);
-MODULE_PARM_DESC(c1, "weight for reducing RTT variance (in %)");
+module_param(min_rate, int, 0644);
+MODULE_PARM_DESC(min_rate, "the minimum pacing rate (Mbits/s)");
 
-module_param(c2, int, 0);
-MODULE_PARM_DESC(c2, "weight for reducing control action (in %)");
+module_param(max_rate, int, 0644);
+MODULE_PARM_DESC(max_rate, "the maximum pacing rate (Mbits/s)");
+
+module_param(c1, int, 0644);
+MODULE_PARM_DESC(c1, "weight for reducing RTT variance (out of 1000000)");
+
+module_param(c2, int, 0644);
+MODULE_PARM_DESC(c2, "weight for reducing control action (out of 1000000)");
 
 
 struct mpc_flow {
@@ -128,9 +136,12 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 		5 << 3,
 		5,
 		scaled_from_frac(learn_rate, 100),
+		// Convert mbits to bytes.
+		scaled_from_int(min_rate, 20-3),
+		scaled_from_int(max_rate, 20-3),
 		scaled_from_int(over, 0),
-		scaled_from_frac(c1, 100),
-		scaled_from_frac(c2, 100));
+		scaled_from_frac(c1, 1000000),
+		scaled_from_frac(c2, 1000000));
 
 	mpc_dfs_register(&debugfs, &flow->md.stats);
 

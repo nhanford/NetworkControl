@@ -18,12 +18,12 @@ import matplotlib.pyplot as plt
 import random
 
 LR = 0.5
-OVER = 1
+OVER = 3
 C1 = 0.3
 C2 = 0.3
 W = 0.1
 IPERIOD = 200
-DPERIOD = 2
+DPERIOD = 0
 
 NUM_DATA_POINTS = 5000
 
@@ -62,15 +62,16 @@ class Tester:
 
         plt.figure(self.plotCount_)
         plt.plot(recorded_index, recorded_latency, 'r--',
-                 recorded_index, predicted_latency, 'g^',
-                 recorded_index, recorded_rate, 'yo',
-                 recorded_index, x, 'c-',
-                 recorded_index, rB, 'g-',
-                 recorded_index, lP, 'b-')
-        plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'x', 'rB', 'lP'])
+                 #recorded_index, predicted_latency, 'g^',
+                 recorded_index, recorded_rate, 'bo')#,
+                 #recorded_index, x, 'c-',
+                 #recorded_index, rB, 'g-'),
+                 #recorded_index, lP, 'b-')
+        #plt.legend(['Actual Latency', 'Predicted Latency', 'Rate', 'x', 'rB', 'lP'])
+        plt.legend(['RTT', 'Pacing Rate'])
         plt.title('Simulation of Latency and Control: ' + desc)
         plt.xlabel('Time step')
-        plt.ylabel('Arbitrary units')
+        #plt.ylabel('Arbitrary units')
         plt.ylim(-5, 35)
         self.plotCount_ += 1
 
@@ -231,6 +232,6 @@ if __name__ == "__main__":
     #tester.test(LatencyGenerator(10, 1.0, 0.1, -0.2, 0.5),
     #        "Fridovich's Original Model")
 
-    tester.test(Noise(NetRes(0.1*0.1, 10, 30, 15), 1.0, 0.0e-3), "Network Model")
+    tester.test(Noise(NetRes(0.1*0.1, 10, 30, 15), 2.5, 0.0e-3), "Network Model")
 
     tester.results()

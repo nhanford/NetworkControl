@@ -5,12 +5,15 @@
 
 
 int model_init(struct model *md, scaled weight, u64 inc_period,
-	u64 dec_period, scaled learn_rate, scaled over, scaled c1, scaled c2)
+	u64 dec_period, scaled learn_rate, scaled min_rate, scaled max_rate,
+	scaled over, scaled c1, scaled c2)
 {
 	md->weight = weight;
 	md->inc_period = inc_period;
 	md->dec_period = dec_period;
 	md->learn_rate = learn_rate;
+	md->min_rate = min_rate;
+	md->max_rate = max_rate;
 
 	md->over = over;
 	md->c1 = c1;

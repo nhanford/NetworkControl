@@ -12,6 +12,8 @@ struct model {
 	scaled learn_rate;
 	u64 inc_period;
 	u64 dec_period;
+	scaled min_rate;
+	scaled max_rate;
 	scaled rate_set;
 
 	// How far over the minimum RTT should we be.
@@ -36,7 +38,8 @@ struct model {
 };
 
 int model_init(struct model *md, scaled weight, u64 inc_period,
-	u64 dec_period, scaled learn_rate, scaled over, scaled c1, scaled c2);
+	u64 dec_period, scaled learn_rate, scaled min_rate, scaled max_rate,
+	scaled over, scaled c1, scaled c2);
 
 void model_release(struct model *md);
 

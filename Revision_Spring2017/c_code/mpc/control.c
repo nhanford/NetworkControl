@@ -55,7 +55,7 @@ scaled control_process(struct model *md, scaled time, scaled rate_meas,
 	if (!SEQ(t4, ZERO))
 		md->rate_set = SD(SA(SA(t1, t2), t3), t4);
 
-	md->rate_set = scaled_min(scaled_max(MPC_MIN_RATE, md->rate_set), MPC_MAX_RATE);
+	md->rate_set = scaled_min(scaled_max(md->min_rate, md->rate_set), md->max_rate);
 
 
 	xhat = md->x0;
