@@ -41,6 +41,10 @@ int model_init(struct model *md, scaled weight, u64 inc_period,
 	u64 dec_period, scaled learn_rate, scaled min_rate, scaled max_rate,
 	scaled over, scaled c1, scaled c2);
 
+int model_change(struct model *md, scaled weight, u64 inc_period,
+	u64 dec_period, scaled learn_rate, scaled min_rate, scaled max_rate,
+	scaled over, scaled c1, scaled c2);
+
 void model_release(struct model *md);
 
 void model_reset(struct model *md);
