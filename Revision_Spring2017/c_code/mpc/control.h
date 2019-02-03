@@ -4,10 +4,6 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-// How many times can control_process be called before the model rolls over all
-// internal values.
-size_t control_rollover(struct model *md);
-
 // Update model and return the next pacing rate.
 //
 // @param time The current time in us.

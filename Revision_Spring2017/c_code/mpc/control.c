@@ -8,12 +8,6 @@
 static void control_update(struct model *md, scaled rate_meas, scaled rtt_meas);
 
 
-size_t control_rollover(struct model *md)
-{
-	return md->timer;
-}
-
-
 scaled control_process(struct model *md, scaled time, scaled rate_meas,
 	scaled rtt_meas)
 {
@@ -92,7 +86,7 @@ static void control_update(struct model *md, scaled rate_meas, scaled rtt_meas)
 		md->rb = SA(md->rb, SM(md->learn_rate, t2));
 	}
 
-	md->rb = scaled_min(scaled_max(MPC_MIN_RATE, md->rb), MPC_MAX_RATE);
+	md->rb = scaled_min(scaled_max(md->min_rate, md->rb), md->max_rate);
 
 	md->avg_rtt = wma(md->weight, md->avg_rtt, rtt_meas);
 }

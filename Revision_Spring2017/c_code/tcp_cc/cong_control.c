@@ -17,7 +17,6 @@
 
 #include "../mpc/control.h"
 
-static unsigned int id_counter = 0;
 static struct kset *mpc_kset;
 static struct mpc_dfs debugfs;
 
@@ -243,14 +242,13 @@ void mpc_cc_init(struct sock *sk)
 
 	ctl->kobj.kset = mpc_kset;
 
-	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", id_counter);
+	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", sk->sk_num);
 	if (retval) {
 		ctl->has_kobj = false;
 		kobject_put(&ctl->kobj);
 	} else {
 		ctl->has_kobj = true;
 	}
-	id_counter++;
 
 	kobject_uevent(&ctl->kobj, KOBJ_ADD);
 
@@ -315,6 +313,7 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 {
 	struct control *ctl = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
+	u64 now = ktime_get_ns();
 
 	// rs->rtt_us = RTT of last packet to be acknowledged.
 	// tp->srtt_us = WMA of RTT
@@ -323,7 +322,8 @@ void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 	if (ctl->md != NULL && rs->rtt_us > 0) {
 		set_model_params(ctl);
 
-		ctl->rate = STI(control_process(ctl->md, SFI(0, 0),
+		ctl->rate = STI(control_process(ctl->md,
+						SFI(now/NSEC_PER_USEC, 0),
 						SFI(ctl->rate, 0),
 						SFI(rs->rtt_us, 0)));
 		set_rate(sk);
