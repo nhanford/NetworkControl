@@ -200,7 +200,6 @@ inline void set_rate(struct sock *sk) {
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	sk->sk_pacing_rate = ctl->rate;
-	printk(KERN_INFO "mpc: rate %u\n", ctl->rate);
 
 	tp->snd_cwnd = 10000;//max_t(u32, 1, (ctl->rate / tp->mss_cache)
 			//* tp->srtt_us / USEC_PER_SEC);
@@ -242,6 +241,7 @@ void mpc_cc_init(struct sock *sk)
 
 	ctl->kobj.kset = mpc_kset;
 
+	// FIXME: I think it is possible to overlap here.
 	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", sk->sk_num);
 	if (retval) {
 		ctl->has_kobj = false;
