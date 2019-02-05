@@ -27,6 +27,7 @@ DPERIOD = 0
 
 NUM_DATA_POINTS = 5000
 
+matplotlib.rc('font', size=22)
 
 class Tester:
     def __init__(self):
