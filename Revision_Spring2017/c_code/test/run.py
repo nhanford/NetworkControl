@@ -39,12 +39,18 @@ def setMinMaxRate(proc):
         port = c.laddr.port
 
         if args.min_rate is not None:
-            with open("/sys/kernel/mpccc/{}/min_rate".format(port), 'w') as f:
-                f.write(str(args.min_rate))
+            try:
+                with open("/sys/kernel/mpccc/{}/min_rate".format(port), 'w') as f:
+                    f.write(str(args.min_rate))
+            except:
+                print("Couldn't set min rate for socket {}".format(port))
 
         if args.max_rate is not None:
-            with open("/sys/kernel/mpccc/{}/max_rate".format(port), 'w') as f:
-                f.write(str(args.max_rate))
+            try:
+                with open("/sys/kernel/mpccc/{}/max_rate".format(port), 'w') as f:
+                    f.write(str(args.max_rate))
+            except:
+                print("Couldn't set max rate for socket {}".format(port))
 
 
 with open(args.test + "-test.json", mode = 'w') as testFile:
