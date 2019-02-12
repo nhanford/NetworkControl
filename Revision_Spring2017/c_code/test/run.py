@@ -27,6 +27,8 @@ parser.add_argument('-v', '--verbose', action='store_true',
         help="Print additional information.")
 args = parser.parse_args()
 
+mpcccSysfs = '/sys/kernel/mpccc'
+
 
 print("Starting kernel logging.")
 logger = logger.Logger(args.test + "-module.json", args.interval, args.verbose)
@@ -35,22 +37,26 @@ logger.start()
 def setMinMaxRate(proc):
     time.sleep(0.1)
 
+    if args.min_rate is None and args.max_rate is None:
+        return
+
     for c in proc.connections():
         port = c.laddr.port
 
-        if args.min_rate is not None:
-            try:
-                with open("/sys/kernel/mpccc/{}/min_rate".format(port), 'w') as f:
-                    f.write(str(args.min_rate))
-            except:
-                print("Couldn't set min rate for socket {}".format(port))
+        for mpcid in os.listdir(mpcccSysfs):
+            filename = mpcccSysfs + '/' + mpcid
+            sockNum = 0
 
-        if args.max_rate is not None:
-            try:
-                with open("/sys/kernel/mpccc/{}/max_rate".format(port), 'w') as f:
+            with open(filename + '/sock_num') as f:
+                sockNum = int(f.read())
+
+            if args.min_rate is not None and sockNum == port:
+                with open(filename + '/min_rate', 'w') as f:
+                    f.write(str(args.min_rate))
+
+            if args.max_rate is not None and sockNum == port:
+                with open(filename + '/max_rate', 'w') as f:
                     f.write(str(args.max_rate))
-            except:
-                print("Couldn't set max rate for socket {}".format(port))
 
 
 with open(args.test + "-test.json", mode = 'w') as testFile:

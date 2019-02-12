@@ -17,6 +17,7 @@
 
 #include "../mpc/control.h"
 
+static unsigned long id_count = 0;
 static struct kset *mpc_kset;
 static struct mpc_dfs debugfs;
 
@@ -30,6 +31,7 @@ struct control {
 	struct ctl_table parent_sysctl_tbl;
 	struct ctl_table sysctl_tbl[8];
 
+	unsigned int sock_num;
 	int weight;     // %
 	int learn_rate; // %
 	int over;       // us
@@ -109,6 +111,8 @@ static ssize_t attr_show(struct control *ctl, struct control_attribute *attr,
 {
 	int var;
 
+	if (strcmp(attr->attr.name, "sock_num") == 0)
+		var = ctl->sock_num;
 	if (strcmp(attr->attr.name, "weight") == 0)
 		var = ctl->weight;
 	if (strcmp(attr->attr.name, "learn_rate") == 0)
@@ -137,6 +141,8 @@ static ssize_t attr_store(struct control *ctl, struct control_attribute *attr,
 	if (ret < 0)
 		return ret;
 
+	if (strcmp(attr->attr.name, "sock_num") == 0)
+		ctl->sock_num = var;
 	if (strcmp(attr->attr.name, "weight") == 0)
 		ctl->weight = var;
 	if (strcmp(attr->attr.name, "learn_rate") == 0)
@@ -155,6 +161,8 @@ static ssize_t attr_store(struct control *ctl, struct control_attribute *attr,
 	return count;
 }
 
+static struct control_attribute sock_num_attribute =
+	__ATTR(sock_num, 0444, attr_show, attr_store);
 static struct control_attribute weight_attribute =
 	__ATTR(weight, 0664, attr_show, attr_store);
 static struct control_attribute learn_rate_attribute =
@@ -172,6 +180,7 @@ static struct control_attribute c2_attribute =
 
 
 static struct attribute *control_default_attrs[] = {
+	&sock_num_attribute.attr,
 	&weight_attribute.attr,
 	&learn_rate_attribute.attr,
 	&over_attribute.attr,
@@ -192,7 +201,6 @@ static struct kobj_type control_ktype = {
 //
 //
 //
-
 
 // Set the pacing rate. rate is in bytes/sec.
 inline void set_rate(struct sock *sk) {
@@ -229,6 +237,7 @@ void mpc_cc_init(struct sock *sk)
 
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
 
+	ctl->sock_num = sk->sk_num;
 	ctl->weight = 10;
 	ctl->learn_rate = 10;
 	ctl->over = 200;
@@ -242,15 +251,15 @@ void mpc_cc_init(struct sock *sk)
 	ctl->kobj.kset = mpc_kset;
 
 	// FIXME: I think it is possible to overlap here.
-	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", sk->sk_num);
+	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", id_count);
 	if (retval) {
 		ctl->has_kobj = false;
 		kobject_put(&ctl->kobj);
 	} else {
 		ctl->has_kobj = true;
+		kobject_uevent(&ctl->kobj, KOBJ_ADD);
 	}
-
-	kobject_uevent(&ctl->kobj, KOBJ_ADD);
+	id_count++;
 
 
 	ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
