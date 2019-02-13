@@ -12,10 +12,11 @@ class RateSysfs:
     continually in a separate thread, so that when the process opens a port it
     gets set.
     """
-    def __init__(self, proc, minRate, maxRate, delay=0.25):
+    def __init__(self, proc, minRate, maxRate, allPorts=False, delay=0.25):
         self.proc = proc
         self.minRate = minRate
         self.maxRate = maxRate
+        self.allPorts = allPorts
         self.delay = delay
 
         self.running = True
@@ -60,7 +61,7 @@ class RateSysfs:
                     with open(filename + '/sock_num') as f:
                         sockNum = int(f.read())
 
-                    if sockNum == port:
+                    if self.allPorts or sockNum == port:
                         if self.minRate is not None:
                             with open(filename + '/min_rate', 'w') as f:
                                 f.write(str(self.minRate))
@@ -70,6 +71,9 @@ class RateSysfs:
                                 f.write(str(self.maxRate))
             except:
                 print("Could not set min/max rate for port {}.".format(port))
+
+                with self.lock:
+                    self.running = False
 
     def getPorts(self):
         ports = []

@@ -55,7 +55,9 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
             '--parsable', '-p'],
             stdout = subprocess.PIPE)
 
-        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate)
+        # Set rate for every port since I can't figure out how to get bwctl's
+        # ports.
+        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate, allPorts=True)
         rateSetter.start()
 
         (outputFile, _) = tester.communicate()
