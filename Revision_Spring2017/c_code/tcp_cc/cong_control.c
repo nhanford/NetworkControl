@@ -22,7 +22,7 @@ static struct kset *mpc_kset;
 static struct mpc_dfs debugfs;
 
 struct control {
-	struct model *md;
+	struct model md;
 	u32 rate;
 
 	bool has_kobj;
@@ -94,15 +94,8 @@ static const struct sysfs_ops control_sysfs_ops = {
 
 static void control_release(struct kobject *kobj)
 {
-	struct control *ctl;
-
-	ctl = to_control(kobj);
-
-	if (ctl->md != NULL) {
-		mpc_dfs_unregister(&debugfs, &ctl->md->stats);
-		model_release(ctl->md);
-		kfree(ctl->md);
-	}
+	struct control *ctl = to_control(kobj);
+	kfree(ctl);
 }
 
 
@@ -202,9 +195,14 @@ static struct kobj_type control_ktype = {
 //
 //
 
+inline struct control* get_control(struct sock *sk) {
+	struct control **ctlptr = inet_csk_ca(sk);
+	return *ctlptr;
+}
+
 // Set the pacing rate. rate is in bytes/sec.
 inline void set_rate(struct sock *sk) {
-	struct control *ctl = inet_csk_ca(sk);
+	struct control *ctl = get_control(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	sk->sk_pacing_rate = ctl->rate;
@@ -216,7 +214,7 @@ inline void set_rate(struct sock *sk) {
 
 inline void set_model_params(struct control *ctl)
 {
-	model_change(ctl->md,
+	model_change(&ctl->md,
 		scaled_from_frac(ctl->weight, 100),
 		5 << 3,
 		5,
@@ -232,26 +230,24 @@ inline void set_model_params(struct control *ctl)
 
 void mpc_cc_init(struct sock *sk)
 {
-	struct control *ctl = inet_csk_ca(sk);
+	struct control **ctlptr = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
+	struct control *ctl = kzalloc(sizeof(struct control), GFP_KERNEL);
+	int retval;
+
+	if (ctl == NULL) {
+		*ctlptr = NULL;
+		return;
+	}
+
+	*ctlptr = ctl;
 
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
 
-	ctl->sock_num = sk->sk_num;
-	ctl->weight = 10;
-	ctl->learn_rate = 10;
-	ctl->over = 200;
-	ctl->min_rate = 1 << 10;
-	ctl->max_rate = 25 << 10;
-	ctl->c1 = 400000;
-	ctl->c2 = 10000;
-
-	int retval;
 
 	ctl->kobj.kset = mpc_kset;
 
-	// FIXME: I think it is possible to overlap here.
-	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%d", id_count);
+	retval = kobject_init_and_add(&ctl->kobj, &control_ktype, NULL, "%lu", id_count);
 	if (retval) {
 		ctl->has_kobj = false;
 		kobject_put(&ctl->kobj);
@@ -262,8 +258,16 @@ void mpc_cc_init(struct sock *sk)
 	id_count++;
 
 
-	ctl->md = kmalloc(sizeof(struct model), GFP_KERNEL);
-	model_init(ctl->md,
+	ctl->sock_num = sk->sk_num;
+	ctl->weight = 10;
+	ctl->learn_rate = 10;
+	ctl->over = 200;
+	ctl->min_rate = 1 << 10;
+	ctl->max_rate = 25 << 10;
+	ctl->c1 = 400000;
+	ctl->c2 = 10000;
+
+	model_init(&ctl->md,
 		scaled_from_frac(ctl->weight, 100),
 		5 << 3,
 		5,
@@ -275,18 +279,27 @@ void mpc_cc_init(struct sock *sk)
 		scaled_from_frac(ctl->c1, 1000000),
 		scaled_from_frac(ctl->c2, 1000000));
 
-	mpc_dfs_register(&debugfs, &ctl->md->stats);
+	mpc_dfs_register(&debugfs, &ctl->md.stats);
 }
 
 
 void mpc_cc_release(struct sock *sk)
 {
-	struct control *ctl = inet_csk_ca(sk);
+	struct control **ctlptr = inet_csk_ca(sk);
+	struct control *ctl = *ctlptr;
 
-	if (ctl->has_kobj) {
-		kobject_put(&ctl->kobj);
-		ctl->has_kobj = false;
+	if (ctl != NULL) {
+		mpc_dfs_unregister(&debugfs, &ctl->md.stats);
+		model_release(&ctl->md);
+
+		if (ctl->has_kobj) {
+			kobject_put(&ctl->kobj);
+		} else {
+			kfree(ctl);
+		}
 	}
+
+	*ctlptr = NULL;
 }
 
 
@@ -305,9 +318,7 @@ void mpc_cc_avoid(struct sock *sk, u32 ack, u32 acked)
 
 u32 mpc_cc_undo_cwnd(struct sock *sk)
 {
-	struct control *ctl = inet_csk_ca(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
-
 	return tp->snd_cwnd;
 }
 
@@ -320,18 +331,17 @@ void mpc_cc_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 
 void mpc_cc_main(struct sock *sk, const struct rate_sample *rs)
 {
-	struct control *ctl = inet_csk_ca(sk);
-	struct tcp_sock *tp = tcp_sk(sk);
+	struct control *ctl = get_control(sk);
 	u64 now = ktime_get_ns();
 
 	// rs->rtt_us = RTT of last packet to be acknowledged.
 	// tp->srtt_us = WMA of RTT
 	// tp->tp->mdev_us = Variance of WMA of RTT
 
-	if (ctl->md != NULL && rs->rtt_us > 0) {
+	if (ctl != NULL && rs->rtt_us > 0) {
 		set_model_params(ctl);
 
-		ctl->rate = STI(control_process(ctl->md,
+		ctl->rate = STI(control_process(&ctl->md,
 						SFI(now/NSEC_PER_USEC, 0),
 						SFI(ctl->rate, 0),
 						SFI(rs->rtt_us, 0)));
