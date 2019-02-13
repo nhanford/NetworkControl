@@ -43,20 +43,23 @@ def setMinMaxRate(proc):
     for c in proc.connections():
         port = c.laddr.port
 
-        for mpcid in os.listdir(mpcccSysfs):
-            filename = mpcccSysfs + '/' + mpcid
-            sockNum = 0
+        try:
+            for mpcid in os.listdir(mpcccSysfs):
+                filename = mpcccSysfs + '/' + mpcid
+                sockNum = 0
 
-            with open(filename + '/sock_num') as f:
-                sockNum = int(f.read())
+                with open(filename + '/sock_num') as f:
+                    sockNum = int(f.read())
 
-            if args.min_rate is not None and sockNum == port:
-                with open(filename + '/min_rate', 'w') as f:
-                    f.write(str(args.min_rate))
+                if args.min_rate is not None and sockNum == port:
+                    with open(filename + '/min_rate', 'w') as f:
+                        f.write(str(args.min_rate))
 
-            if args.max_rate is not None and sockNum == port:
-                with open(filename + '/max_rate', 'w') as f:
-                    f.write(str(args.max_rate))
+                if args.max_rate is not None and sockNum == port:
+                    with open(filename + '/max_rate', 'w') as f:
+                        f.write(str(args.max_rate))
+        except:
+            print("Could not set min/max rate for port {}.".format(port))
 
 
 with open(args.test + "-test.json", mode = 'w') as testFile:
