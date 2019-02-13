@@ -51,29 +51,29 @@ class RateSysfs:
         if self.minRate is None and self.maxRate is None:
             return
 
-        for port in self.getPorts():
-            try:
-                subdirs = os.listdir(mpcccSysfs)
-                for mpcid in subdirs:
-                    filename = mpcccSysfs + '/' + mpcid
-                    sockNum = 0
+        try:
+            for port in self.getPorts():
+                    subdirs = os.listdir(mpcccSysfs)
+                    for mpcid in subdirs:
+                        filename = mpcccSysfs + '/' + mpcid
+                        sockNum = 0
 
-                    with open(filename + '/sock_num') as f:
-                        sockNum = int(f.read())
+                        with open(filename + '/sock_num') as f:
+                            sockNum = int(f.read())
 
-                    if self.allPorts or sockNum == port:
-                        if self.minRate is not None:
-                            with open(filename + '/min_rate', 'w') as f:
-                                f.write(str(self.minRate))
+                        if self.allPorts or sockNum == port:
+                            if self.minRate is not None:
+                                with open(filename + '/min_rate', 'w') as f:
+                                    f.write(str(self.minRate))
 
-                        if self.maxRate is not None:
-                            with open(filename + '/max_rate', 'w') as f:
-                                f.write(str(self.maxRate))
-            except:
-                print("Could not set min/max rate for port {}.".format(port))
+                            if self.maxRate is not None:
+                                with open(filename + '/max_rate', 'w') as f:
+                                    f.write(str(self.maxRate))
+        except:
+            print("Could not set min/max rate for port {}.".format(port))
 
-                with self.lock:
-                    self.running = False
+            with self.lock:
+                self.running = False
 
     def getPorts(self):
         ports = []
