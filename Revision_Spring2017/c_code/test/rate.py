@@ -50,9 +50,7 @@ class RateSysfs:
         if self.minRate is None and self.maxRate is None:
             return
 
-        for c in self.proc.connections():
-            port = c.laddr.port
-
+        for port in self.getPorts():
             try:
                 subdirs = os.listdir(mpcccSysfs)
                 for mpcid in subdirs:
@@ -72,3 +70,11 @@ class RateSysfs:
                                 f.write(str(self.maxRate))
             except:
                 print("Could not set min/max rate for port {}.".format(port))
+
+    def getPorts(self):
+        ports = []
+
+        for p in [self.proc] + self.proc.children():
+            ports += [c.laddr.port for c in p.connections()]
+
+        return ports
