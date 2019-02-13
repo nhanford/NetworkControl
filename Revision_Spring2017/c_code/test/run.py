@@ -7,6 +7,7 @@ import psutil
 import time
 
 import logger
+import rate
 
 parser = argparse.ArgumentParser(description = "Run a test.")
 parser.add_argument('test', type = str,
@@ -27,39 +28,10 @@ parser.add_argument('-v', '--verbose', action='store_true',
         help="Print additional information.")
 args = parser.parse_args()
 
-mpcccSysfs = '/sys/kernel/mpccc'
-
 
 print("Starting kernel logging.")
 logger = logger.Logger(args.test + "-module.json", args.interval, args.verbose)
 logger.start()
-
-def setMinMaxRate(proc):
-    time.sleep(0.1)
-
-    if args.min_rate is None and args.max_rate is None:
-        return
-
-    for c in proc.connections():
-        port = c.laddr.port
-
-        try:
-            for mpcid in os.listdir(mpcccSysfs):
-                filename = mpcccSysfs + '/' + mpcid
-                sockNum = 0
-
-                with open(filename + '/sock_num') as f:
-                    sockNum = int(f.read())
-
-                if args.min_rate is not None and sockNum == port:
-                    with open(filename + '/min_rate', 'w') as f:
-                        f.write(str(args.min_rate))
-
-                if args.max_rate is not None and sockNum == port:
-                    with open(filename + '/max_rate', 'w') as f:
-                        f.write(str(args.max_rate))
-        except:
-            print("Could not set min/max rate for port {}.".format(port))
 
 
 with open(args.test + "-test.json", mode = 'w') as testFile:
@@ -70,21 +42,27 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
             '-i', str(args.interval), '-t', str(args.duration), '-J'],
             stdout = testFile)
 
-        setMinMaxRate(tester)
+        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate)
+        rateSetter.start()
 
         tester.wait()
         print("Tester finished with code {}.".format(tester.returncode))
+
+        rateSetter.stop()
     elif args.tester == 'bwctl':
         tester = psutil.Popen(['bwctl', '-c', args.destination,
             '-T', 'iperf3', '-i', str(args.interval), '-t', str(args.duration),
             '--parsable', '-p'],
             stdout = subprocess.PIPE)
 
-        setMinMaxRate(tester)
+        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate)
+        rateSetter.start()
 
         (outputFile, _) = tester.communicate()
         outputFile = outputFile.splitlines()[0]
         print("Tester finished with code {}.".format(tester.returncode))
+
+        rateSetter.stop()
 
         if outputFile != "":
             resFile = args.test + "-test.json"

@@ -21,8 +21,8 @@ data = Data(args.test)
 
 print("Mean RTT: {}".format(data.stream.rtt.mean()))
 print("RTT Std: {}".format(np.sqrt(data.stream.rttvar.mean())))
-print("Mean Rate: {:e}".format(data.stream.bits_per_second.mean()))
-print("Rate Std: {:e}".format(data.stream.bits_per_second.std()))
+print("Mean Rate: {:e} mbps".format(data.stream.bits_per_second.mean()/(1<<20)))
+print("Rate Std: {:e} mbps".format(data.stream.bits_per_second.std()/(1<<20)))
 print("Total Losses: {}".format(data.stream.retransmits.sum()))
 
 #print("\nFor Kernel Module")
