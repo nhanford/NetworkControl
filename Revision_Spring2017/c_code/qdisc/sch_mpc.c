@@ -349,8 +349,6 @@ static int mpc_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 	if (flow == NULL || flow->qlen == sch->limit) {
 		return qdisc_drop(skb, sch, to_free);
 	} else if (skb != NULL) {
-		u64 now = ktime_get_ns();
-
 		flow_enqueue(flow, skb);
 		flow_update_time_to_send(flow, now);
 		mpc_add_flow(sch, flow);

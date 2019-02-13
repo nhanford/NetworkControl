@@ -52,7 +52,7 @@ void mpc_dfs_register(struct mpc_dfs *dfs, struct mpc_dfs_stats *dstats)
 	dstats->rb = 0;
 	dstats->x = 0;
 
-	sprintf(uniq_name, "%lld", dfs->next_id);
+	sprintf(uniq_name, "%llu", dfs->next_id);
 
 
 	spin_lock_irqsave(&dfs_lock, flags);
