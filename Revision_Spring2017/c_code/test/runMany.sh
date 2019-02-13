@@ -46,14 +46,14 @@ banner() {
 #vexec tc qdisc delete dev $qdev root
 #
 #echo
-
-banner "cubic/pfifo"
-vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
-vexec tc qdisc replace dev $qdev root pfifo
-runSet cubic-pfifo
-vexec tc qdisc delete dev $qdev root
-
-echo
+#
+#banner "cubic/pfifo"
+#vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
+#vexec tc qdisc replace dev $qdev root pfifo
+#runSet cubic-pfifo
+#vexec tc qdisc delete dev $qdev root
+#
+#echo
 
 banner "BBR/fq"
 vexec sysctl -w net/ipv4/tcp_congestion_control=bbr
@@ -61,13 +61,13 @@ vexec tc qdisc replace dev $qdev root fq
 runSet bbr-fq
 vexec tc qdisc delete dev $qdev root
 
-#echo
-#
-#banner "HTCP/pfifo"
-#vexec sysctl -w net/ipv4/tcp_congestion_control=htcp
-#vexec tc qdisc replace dev $qdev root pfifo
-#runSet htcp-pfifo
-#vexec tc qdisc delete dev $qdev root
+echo
+
+banner "HTCP/pfifo"
+vexec sysctl -w net/ipv4/tcp_congestion_control=htcp
+vexec tc qdisc replace dev $qdev root pfifo
+runSet htcp-pfifo
+vexec tc qdisc delete dev $qdev root
 
 #echo
 #
@@ -79,28 +79,28 @@ vexec tc qdisc delete dev $qdev root
 #runSet reno-mpccc
 #vexec cd $base/qdisc
 #vexec make stop "QDEV=$qdev"
-
-echo
-
-banner "cubic/MPCC"
-vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
-vexec cd $base/qdisc
-vexec make
-vexec make start "QDEV=$qdev"
-runSet cubic-mpccc
-vexec cd $base/qdisc
-vexec make stop "QDEV=$qdev"
-
+#
 #echo
 #
-#banner "HTCP/MPCC"
-#vexec sysctl -w net/ipv4/tcp_congestion_control=htcp
+#banner "cubic/MPCC"
+#vexec sysctl -w net/ipv4/tcp_congestion_control=cubic
 #vexec cd $base/qdisc
 #vexec make
 #vexec make start "QDEV=$qdev"
-#runSet htcp-mpccc
+#runSet cubic-mpccc
 #vexec cd $base/qdisc
 #vexec make stop "QDEV=$qdev"
+
+echo
+
+banner "HTCP/MPCC"
+vexec sysctl -w net/ipv4/tcp_congestion_control=htcp
+vexec cd $base/qdisc
+vexec make
+vexec make start "QDEV=$qdev"
+runSet htcp-mpccc
+vexec cd $base/qdisc
+vexec make stop "QDEV=$qdev"
 
 echo
 
