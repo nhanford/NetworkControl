@@ -18,6 +18,8 @@ parser.add_argument('--min-rate', type = int,
         help = "Minimum pacing rate in mbps. (sysfs API only)")
 parser.add_argument('--max-rate', type = int,
         help = "Maximum pacing rate in mbps. (sysfs API only)")
+parser.add_argument('--all-ports', action='store_true',
+        help = "When setting min/max rates, apply to all ports on system.")
 parser.add_argument('-d', '--duration', type = float, default = 60,
         help = "Logging duration in seconds.")
 parser.add_argument('-i', '--interval', type = float, default = 0.1,
@@ -42,7 +44,7 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
             '-i', str(args.interval), '-t', str(args.duration), '-J'],
             stdout = testFile)
 
-        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate)
+        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate, allPorts=args.all_ports)
         rateSetter.start()
 
         tester.wait()
@@ -57,7 +59,7 @@ with open(args.test + "-test.json", mode = 'w') as testFile:
 
         # Set rate for every port since I can't figure out how to get bwctl's
         # ports.
-        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate, allPorts=True)
+        rateSetter = rate.RateSysfs(tester, args.min_rate, args.max_rate, allPorts=args.all_ports)
         rateSetter.start()
 
         (outputFile, _) = tester.communicate()

@@ -30,9 +30,9 @@ runSet() {
     vexec mkdir -p $dir
 
     vexec cd $base/test
-    vexec ./run.py "$dir/sacr" sacr-pt1.es.net -t bwctl --min-rate 7500 --max-rate 10000
-    vexec ./run.py "$dir/denv" denv-pt1.es.net -t bwctl --min-rate 7500 --max-rate 10000
-    vexec ./run.py "$dir/amst" amst-pt1.es.net -t bwctl --min-rate 1000 --max-rate 10000
+    vexec ./run.py "$dir/sacr" sacr-pt1.es.net -t bwctl --min-rate 7500 --max-rate 10000 --all-ports
+    vexec ./run.py "$dir/denv" denv-pt1.es.net -t bwctl --min-rate 7500 --max-rate 10000 --all-ports
+    vexec ./run.py "$dir/amst" amst-pt1.es.net -t bwctl --min-rate 1000 --max-rate 10000 --all-ports
 }
 
 banner() {

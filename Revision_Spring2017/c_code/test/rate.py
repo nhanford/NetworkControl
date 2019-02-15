@@ -70,7 +70,7 @@ class RateSysfs:
                                 with open(filename + '/max_rate', 'w') as f:
                                     f.write(str(self.maxRate))
         except:
-            print("Could not set min/max rate for port {}.".format(port))
+            print("Could not set min/max rate.")
 
             with self.lock:
                 self.running = False
