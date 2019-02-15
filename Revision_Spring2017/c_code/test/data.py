@@ -10,7 +10,7 @@ def getTestData(inFile):
         strms = list(map(lambda i: i['streams'], pdata['intervals']))
         strms = list(zip(*strms)) #[x for y in strms for x in y] # Flatten
 
-        return (pdata, list(map(pd.DataFrame, strms)))
+        return (pdata, list(map(lambda s: pd.DataFrame(list(s)), strms)))
 
 def getModuleData(inFile):
     with open(inFile) as data:

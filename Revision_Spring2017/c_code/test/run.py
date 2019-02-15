@@ -22,7 +22,7 @@ parser.add_argument('-r', '--rate', type=int, nargs=2, action='append',
 #        help="When setting min/max rates, apply to all ports on system.")
 parser.add_argument('-P', '--parallel', type=int, default=1,
         help="When setting min/max rates, apply to all ports on system.")
-parser.add_argument('-d', '--duration', type=float, default=60,
+parser.add_argument('-d', '--duration', type=int, default=60,
         help="Logging duration in seconds.")
 parser.add_argument('-i', '--interval', type=float, default=0.1,
         help="Interval between samples.")
