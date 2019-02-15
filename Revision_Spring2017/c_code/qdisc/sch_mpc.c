@@ -20,6 +20,7 @@
 #include <linux/version.h>
 
 #include "../mpc/control.h"
+#include "../mpc/sysfs.h"
 #include "sch_mpc.h"
 
 
@@ -27,37 +28,7 @@
 #define HT_BITS (5)
 #define RESET_DELAY (100*NSEC_PER_USEC) // In ns
 
-
-// TODO: Move parameters to iproute2 interface
-static int weight = 10;
-static int learn_rate = 10;
-static int over = 200;
-static int min_rate = 1 << 10;
-static int max_rate = 25 << 10;
-static int c1 = 400000;
-static int c2 = 10000;
-
-// All parameter accesses are 0 so they can only be set on insertion.
-module_param(weight, int, 0644);
-MODULE_PARM_DESC(weight, "weight for moving averages (in %)");
-
-module_param(learn_rate, int, 0644);
-MODULE_PARM_DESC(learn_rate, "learning rate (in %)");
-
-module_param(over, int, 0644);
-MODULE_PARM_DESC(over, "how far over minimum RTT we should target (in us)");
-
-module_param(min_rate, int, 0644);
-MODULE_PARM_DESC(min_rate, "the minimum pacing rate (Mbits/s)");
-
-module_param(max_rate, int, 0644);
-MODULE_PARM_DESC(max_rate, "the maximum pacing rate (Mbits/s)");
-
-module_param(c1, int, 0644);
-MODULE_PARM_DESC(c1, "weight for reducing RTT variance (out of 1000000)");
-
-module_param(c2, int, 0644);
-MODULE_PARM_DESC(c2, "weight for reducing control action (out of 1000000)");
+static struct kset *mpc_kset;
 
 
 struct mpc_flow {
@@ -87,6 +58,7 @@ struct mpc_flow {
 	u32 last_srtt;
 
 	struct model md;
+	struct mpc_settings settings;
 };
 
 
@@ -131,17 +103,22 @@ static int flow_init(struct mpc_flow *flow, u64 addr)
 
 	flow->last_srtt = 0;
 
+
+	// NOTE: We just assign port to 0, since it could be multiple.
+	mpc_sysfs_register(&flow->settings, mpc_kset, addr, 0, 10, 10, 200,
+		1 << 10, 25 << 10, 400000, 10000);
+
 	model_init(&flow->md,
-		scaled_from_frac(weight, 100),
+		scaled_from_frac(flow->settings.weight, 100),
 		5 << 3,
 		5,
-		scaled_from_frac(learn_rate, 100),
+		scaled_from_frac(flow->settings.learn_rate, 100),
 		// Convert mbits to bytes.
-		scaled_from_int(min_rate, 20-3),
-		scaled_from_int(max_rate, 20-3),
-		scaled_from_int(over, 0),
-		scaled_from_frac(c1, 1000000),
-		scaled_from_frac(c2, 1000000));
+		scaled_from_int(flow->settings.min_rate, 20-3),
+		scaled_from_int(flow->settings.max_rate, 20-3),
+		scaled_from_int(flow->settings.over, 0),
+		scaled_from_frac(flow->settings.c1, 1000000),
+		scaled_from_frac(flow->settings.c2, 1000000));
 
 	mpc_dfs_register(&debugfs, &flow->md.stats);
 
@@ -152,6 +129,7 @@ static void flow_release(struct mpc_flow *flow)
 {
 	mpc_dfs_unregister(&debugfs, &flow->md.stats);
 	model_release(&flow->md);
+	mpc_sysfs_unregister(&flow->settings);
 }
 
 
@@ -226,6 +204,8 @@ static void flow_update_rate(struct mpc_flow *flow, u64 srtt_us, u64 now)
 		rtt = t1 - t2;
 	else
 		rtt = 0;
+
+	mpc_sysfs_set_model(&flow->settings, &flow->md);
 
 	flow->set_rate = scaled_to_int(control_process(&flow->md,
 		scaled_from_int(now/NSEC_PER_USEC, 0),
@@ -542,6 +522,10 @@ MODULE_DESCRIPTION("A Qdisc that uses model predictive control.");
 MODULE_VERSION("0.01");
 
 static int __init mpcqd_init(void) {
+	mpc_kset = kset_create_and_add("mpccc", NULL, kernel_kobj);
+	if (!mpc_kset)
+		return -ENOMEM;
+
 	mpc_dfs_init(&debugfs);
 	register_qdisc(&mpc_qdisc_ops);
 	printk(KERN_INFO "Loaded module mpcqd\n");
@@ -552,6 +536,7 @@ static int __init mpcqd_init(void) {
 static void __exit mpcqd_exit(void) {
 	mpc_dfs_release(&debugfs);
 	unregister_qdisc(&mpc_qdisc_ops);
+	kset_unregister(mpc_kset);
 	printk(KERN_INFO "Removed module mpcqd\n");
 }
 

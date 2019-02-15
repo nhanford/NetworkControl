@@ -58,7 +58,7 @@ class RateSysfs:
                         filename = mpcccSysfs + '/' + mpcid
                         sockNum = 0
 
-                        with open(filename + '/sock_num') as f:
+                        with open(filename + '/port') as f:
                             sockNum = int(f.read())
 
                         if self.allPorts or sockNum == port:
