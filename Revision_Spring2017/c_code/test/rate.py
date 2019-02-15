@@ -12,12 +12,18 @@ class RateSysfs:
     continually in a separate thread, so that when the process opens a port it
     gets set.
     """
-    def __init__(self, proc, minRate, maxRate, allPorts=False, delay=0.25):
-        self.proc = proc
-        self.minRate = minRate
-        self.maxRate = maxRate
+    def __init__(self, rates, dest, ports, allPorts=False, delay=0.25):
+        """
+        `rates` are pairs of rates to be cycled through for each stream.
+        `dest` is the destination address to set for.
+        `ports` are the affected outgoing ports.
+        `allPorts` triggers to set all outgoing connections.
+        """
+        self.rates = rates
         self.allPorts = allPorts
         self.delay = delay
+        self.dest = dest
+        self.ports = ports
 
         self.running = True
         self.lock = threading.Lock()
@@ -37,48 +43,40 @@ class RateSysfs:
     def run(self):
         running = True
 
-        while running:
-            if self.proc.poll() is None:
+        if self.rates is not None:
+            while running:
                 self.setMinMaxRate()
                 time.sleep(self.delay)
-            else:
-                return
 
-            with self.lock:
-                running = self.running
+                with self.lock:
+                    running = self.running
 
     def setMinMaxRate(self):
-        if self.minRate is None and self.maxRate is None:
-            return
-
         try:
-            for port in self.getPorts():
-                    subdirs = os.listdir(mpcccSysfs)
-                    for mpcid in subdirs:
-                        filename = mpcccSysfs + '/' + mpcid
-                        sockNum = 0
+            subdirs = os.listdir(mpcccSysfs)
+            rateIdx = 0
 
-                        with open(filename + '/port') as f:
-                            sockNum = int(f.read())
+            for mpcid in subdirs:
+                filename = mpcccSysfs + '/' + mpcid
+                mpcDest = 0
+                mpcPort = 0
 
-                        if self.allPorts or sockNum == port:
-                            if self.minRate is not None:
-                                with open(filename + '/min_rate', 'w') as f:
-                                    f.write(str(self.minRate))
+                with open(filename + '/daddr') as f:
+                    mpcDest = int(f.read())
 
-                            if self.maxRate is not None:
-                                with open(filename + '/max_rate', 'w') as f:
-                                    f.write(str(self.maxRate))
-        except:
-            print("Could not set min/max rate.")
+                with open(filename + '/port') as f:
+                    mpcPort = int(f.read())
+
+                if self.allPorts or (mpcDest == self.dest and mpcPort is self.Ports):
+                    with open(filename + '/min_rate', 'w') as f:
+                        f.write(str(self.rates[rateIdx][0]))
+
+                    with open(filename + '/max_rate', 'w') as f:
+                        f.write(str(self.rates[rateIdx][1]))
+
+                    rateIdx = (rateIdx + 1)%len(self.rates)
+        except Exception as e:
+            print("Could not set min/max rate: {}.".format(e))
 
             with self.lock:
                 self.running = False
-
-    def getPorts(self):
-        ports = []
-
-        for p in [self.proc] + self.proc.children():
-            ports += [c.laddr.port for c in p.connections()]
-
-        return ports

@@ -8,9 +8,9 @@ def getTestData(inFile):
     with open(inFile) as data:
         pdata = json.load(data)
         strms = list(map(lambda i: i['streams'], pdata['intervals']))
-        strms = [x for y in strms for x in y] # Flatten
+        strms = list(zip(*strms)) #[x for y in strms for x in y] # Flatten
 
-        return (pdata, pd.DataFrame(strms))
+        return (pdata, list(map(pd.DataFrame, strms)))
 
 def getModuleData(inFile):
     with open(inFile) as data:
@@ -42,7 +42,7 @@ class Data(object):
         testFile = test + '-test.json'
         moduleFile = test + '-module.json'
 
-        (self.rawTest, self.stream) = getTestData(testFile)
+        (self.rawTest, self.streams) = getTestData(testFile)
         startTime = self.rawTest['start']['timestamp']['timesecs']
 
         (self.rawModule, self.module) = getModuleData(moduleFile)

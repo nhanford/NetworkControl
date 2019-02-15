@@ -18,6 +18,8 @@ parser.add_argument('-q', '--limit-quantile', type=float,
         help="Limits output range to within double of a certain quantile.")
 parser.add_argument('-i', '--id', type=str,
         help="Only select kernel output on ID.")
+parser.add_argument('-s', '--stream', type=int, default=0,
+        help="Select the iperf stream to use.")
 parser.add_argument('--guess-id', action='store_true',
         help="Guess the best ID to use")
 args = parser.parse_args()
@@ -38,10 +40,12 @@ if mid is None and args.guess_id:
 if mid is not None:
     data.module = data.module.query("id == @mid")
 
-rtt_adj = data.stream.rtt/1000
-rttVar_adj = data.stream.rttvar/1000
-rate_adj = data.stream.bits_per_second/(1<<20)
-cwnd_adj = data.stream.snd_cwnd/(1<<10)
+stream = data.streams[args.stream]
+
+rtt_adj = stream.rtt/1000
+rttVar_adj = stream.rttvar/1000
+rate_adj = stream.bits_per_second/(1<<20)
+cwnd_adj = stream.snd_cwnd/(1<<10)
 
 mpcRTT_adj = data.module.rtt_meas_us/1000
 mpcRTTPred_adj = data.module.rtt_pred_us/1000
@@ -66,22 +70,22 @@ ax11 = ax10.twinx()
 ax12 = modax[1][1]
 ax13 = ax12.twinx()
 
-ax1.plot(data.stream.start, rtt_adj, 'r', label = 'RTT')
+ax1.plot(stream.start, rtt_adj, 'r', label = 'RTT')
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('RTT (ms)')
 
-ax2.plot(data.stream.start, rttVar_adj, 'g', label = 'RTT Variance')
+ax2.plot(stream.start, rttVar_adj, 'g', label = 'RTT Variance')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('RTT variance (ms)')
 
-ax3.plot(data.stream.start, rate_adj, 'b', label = 'Rate')
+ax3.plot(stream.start, rate_adj, 'b', label = 'Rate')
 ax3.set_xlabel('Time (s)')
 ax3.set_ylabel('Rate (mbit/s)')
 
-ax4.plot(data.stream.start, data.stream.retransmits, 'y', label = 'Retransmits')
+ax4.plot(stream.start, stream.retransmits, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
 
-ax5.plot(data.stream.start, cwnd_adj, 'c', label = 'Congestion Window')
+ax5.plot(stream.start, cwnd_adj, 'c', label = 'Congestion Window')
 ax5.set_xlabel('Time (s)')
 ax5.set_ylabel('Congestion Window (kbytes)')
 
@@ -113,7 +117,7 @@ if args.limit_quantile is not None:
     ax1.set_ylim(0, rtt_adj.quantile(args.limit_quantile)*2)
     ax2.set_ylim(0, rttVar_adj.quantile(args.limit_quantile)*2)
     ax3.set_ylim(0, rate_adj.quantile(args.limit_quantile)*2)
-    ax4.set_ylim(0, data.stream.retransmits.quantile(args.limit_quantile)*2)
+    ax4.set_ylim(0, stream.retransmits.quantile(args.limit_quantile)*2)
     ax5.set_ylim(0, cwnd_adj.quantile(args.limit_quantile)*2)
 
     if len(mpcRTT_adj) > 0:

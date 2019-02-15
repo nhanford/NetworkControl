@@ -9,6 +9,8 @@ from data import Data
 parser = argparse.ArgumentParser(description="Plots test results.")
 parser.add_argument('test', type=str,
         help="The name of the test to run.")
+parser.add_argument('stream', type=int,
+        help="Select the iperf stream to use.")
 parser.add_argument('min_rtt', type=float,
         help="Minimum RTT.")
 parser.add_argument('max_rtt', type=float,
@@ -31,11 +33,12 @@ args = parser.parse_args()
 
 
 data = Data(args.test)
+stream = data.streams[args.stream]
 
-rtt_adj = data.stream.rtt/1000
-rttVar_adj = data.stream.rttvar/1000
-rate_adj = data.stream.bits_per_second/(1<<20)
-cwnd_adj = data.stream.snd_cwnd/(1<<10)
+rtt_adj = stream.rtt/1000
+rttVar_adj = stream.rttvar/1000
+rate_adj = stream.bits_per_second/(1<<20)
+cwnd_adj = stream.snd_cwnd/(1<<10)
 
 mpcRTT_adj = data.module.rtt_meas_us/1000
 mpcRTTPred_adj = data.module.rtt_pred_us/1000
@@ -51,26 +54,26 @@ ax2 = ax1.twinx()
 ax3 = ax[1]
 ax4 = ax3.twinx()
 
-ax1.plot(data.stream.start, rtt_adj, 'r', label = 'RTT')
+ax1.plot(stream.start, rtt_adj, 'r', label = 'RTT')
 ax1.set_xlabel('Time (s)')
 ax1.set_ylabel('RTT (ms)')
 
-ax2.plot(data.stream.start, rttVar_adj, 'g', label = 'RTT Variance')
+ax2.plot(stream.start, rttVar_adj, 'g', label = 'RTT Variance')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('RTT variance (ms)')
 
-ax3.plot(data.stream.start, rate_adj, 'b', label = 'Rate')
+ax3.plot(stream.start, rate_adj, 'b', label = 'Rate')
 ax3.set_xlabel('Time (s)')
 ax3.set_ylabel('Rate (mbit/s)')
 
-ax4.plot(data.stream.start, data.stream.retransmits, 'y', label = 'Retransmits')
+ax4.plot(stream.start, stream.retransmits, 'y', label = 'Retransmits')
 ax4.set_ylabel('Retransmits')
 
 
 ax1.set_ylim(args.min_rtt, args.max_rtt)
 ax2.set_ylim(args.min_rtt_var, args.max_rtt_var)
 ax3.set_ylim(args.min_rate, args.max_rate)
-#ax4.set_ylim(0, data.stream.retransmits.quantile(args.limit_quantile)*2)
+#ax4.set_ylim(0, stream.retransmits.quantile(args.limit_quantile)*2)
 
 fig.legend()
 fig.suptitle(args.title)
