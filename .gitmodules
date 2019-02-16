@@ -4,6 +4,3 @@
 [submodule "Revision_Spring2017/c_code/qdisc/hello/iproute2"]
 	path = Revision_Spring2017/c_code/qdisc/hello/iproute2
 	url = https://git.kernel.org/pub/scm/network/iproute2/iproute2.git
-[submodule "Revision_Spring2017/c_code/qdisc/iproute2"]
-	path = Revision_Spring2017/c_code/qdisc/iproute2
-	url = https://git.kernel.org/pub/scm/network/iproute2/iproute2.git
